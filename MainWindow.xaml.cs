@@ -167,6 +167,7 @@ public partial class MainWindow : Window
         Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme || _isVioletTheme ? "#111111" : "#287FAE"));
         VioletEasterEggText.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         VioletThemeScene.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
+        ManageInstanceFoldersButton.Content = _isVioletTheme ? "✿  分类管理" : "▤  分类管理";
         ThemeToggleButton.ToolTip = _isBlueTheme ? "当前为蓝白主题，点击切换到黑白主题" : _isVioletTheme ? "当前为紫罗兰主题，点击切换到黑白主题" : "当前为黑白主题，点击切换到蓝白主题";
         var logo = LoadBrandLogo(_isBlueTheme ? "CIE金属.png" : "CIE.png");
         if (logo is not null)
@@ -1788,6 +1789,25 @@ public partial class MainWindow : Window
         var visible = folder == "全部版本" ? _instances : _instances.Where(profile => profile.VirtualFolder == folder).ToList();
         InstancesListView.ItemsSource = visible;
         InstancesListView.SelectedItem = visible.FirstOrDefault(profile => profile.Id == selectedId);
+    }
+
+    private string InstanceFolderIconsDirectory => Path.Combine(ProfileDirectory, "version-folder-icons");
+
+    private void ManageInstanceFoldersButton_Click(object sender, RoutedEventArgs e)
+    {
+        var folders = LoadInstanceFolders();
+        var dialog = new CategoryManagerWindow(folders, _instances, SelectedInstance, InstanceFolderIconsDirectory)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+        File.WriteAllText(InstanceFoldersPath, System.Text.Json.JsonSerializer.Serialize(folders));
+        _catalog.Save(_instances);
+        RefreshInstanceFolderChoices();
+        InstancesListView.Items.Refresh();
+        VersionComboBox.Items.Refresh();
+        ModsInstanceComboBox.Items.Refresh();
+        InstancesStatusText.Text = "分类与版本归类已保存。";
     }
 
     private void CreateInstanceFolderButton_Click(object sender, RoutedEventArgs e)
