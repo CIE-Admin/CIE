@@ -223,7 +223,7 @@ public partial class CategoryManagerWindow : Window
         catch { return null; }
     }
 
-    private static BitmapSource DefaultFolderIcon()
+    internal static BitmapSource DefaultFolderIcon()
     {
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
