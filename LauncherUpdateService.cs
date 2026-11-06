@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace CIE;
 
-internal sealed record LauncherUpdate(string Version, string PackageUrl, string ChecksumUrl, Version ParsedVersion);
+internal sealed record LauncherUpdate(string Version, string PackageUrl, string ChecksumUrl, Version ParsedVersion, string ReleaseNotes);
 
 internal static class LauncherUpdateService
 {
@@ -53,7 +53,8 @@ internal static class LauncherUpdateService
         }
         if (string.IsNullOrWhiteSpace(packageUrl) || string.IsNullOrWhiteSpace(checksumUrl))
             throw new InvalidDataException("GitHub Release 缺少启动器更新包或 SHA-256 校验文件。");
-        return new LauncherUpdate(version.ToString(), packageUrl, checksumUrl, version);
+        var releaseNotes = root.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty;
+        return new LauncherUpdate(version.ToString(), packageUrl, checksumUrl, version, releaseNotes);
     }
 
     private static Version Normalize(Version value) => new(value.Major, value.Minor,
