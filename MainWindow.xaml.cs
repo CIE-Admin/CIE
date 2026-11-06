@@ -23,7 +23,7 @@ public partial class MainWindow : Window
     private List<MinecraftVersion> _versions = [];
     private List<InstanceProfile> _instances = [];
     private List<ModrinthProjectHit> _modrinthHits = [];
-    private readonly Dictionary<string, string?> _modrinthIconCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _modrinthIconCache = new(StringComparer.OrdinalIgnoreCase);
     private ModrinthVersionInfo? _selectedModrinthVersion;
     private List<string> _modrinthPrerequisiteNames = [];
     private bool _isInstalling;
@@ -912,24 +912,27 @@ public partial class MainWindow : Window
         CheckModDependenciesAndOrder(mods);
         ModsStatusText.Text = "正在读取 MOD 信息并检查可识别的 Modrinth 更新…";
         ModsListView.ItemsSource = mods;
-        foreach (var mod in mods.Where(m => !string.IsNullOrWhiteSpace(m.ModrinthProjectId)))
+        var logoMods = mods.Where(m => !string.IsNullOrWhiteSpace(m.ModrinthProjectId)).ToList();
+        await Parallel.ForEachAsync(logoMods, new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (mod, cancellationToken) =>
         {
             try
             {
-                if (!_modrinthIconCache.TryGetValue(mod.ModrinthProjectId!, out var iconUrl))
+                var projectId = mod.ModrinthProjectId!;
+                if (!_modrinthIconCache.TryGetValue(projectId, out var iconUrl))
                 {
-                    using var iconRequest = new HttpRequestMessage(HttpMethod.Get, $"https://api.modrinth.com/v2/project/{Uri.EscapeDataString(mod.ModrinthProjectId!)}");
+                    using var iconRequest = new HttpRequestMessage(HttpMethod.Get, $"https://api.modrinth.com/v2/project/{Uri.EscapeDataString(projectId)}");
                     iconRequest.Headers.UserAgent.ParseAdd("CIE-Launcher/0.1.0 (desktop launcher)");
-                    using var iconResponse = await ModrinthClient.SendAsync(iconRequest);
+                    using var iconResponse = await ModrinthClient.SendAsync(iconRequest, cancellationToken);
                     iconResponse.EnsureSuccessStatusCode();
-                    using var iconJson = System.Text.Json.JsonDocument.Parse(await iconResponse.Content.ReadAsStreamAsync());
-                    iconUrl = iconJson.RootElement.TryGetProperty("icon_url", out var icon) && icon.ValueKind == System.Text.Json.JsonValueKind.String ? icon.GetString() : null;
-                    _modrinthIconCache[mod.ModrinthProjectId!] = iconUrl;
+                    using var iconJson = System.Text.Json.JsonDocument.Parse(await iconResponse.Content.ReadAsStreamAsync(cancellationToken));
+                    iconUrl = iconJson.RootElement.TryGetProperty("icon_url", out var icon) && icon.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? icon.GetString() ?? "" : "";
+                    _modrinthIconCache.TryAdd(projectId, iconUrl);
                 }
-                mod.IconUrl = iconUrl;
+                mod.IconUrl = string.IsNullOrWhiteSpace(iconUrl) ? null : iconUrl;
             }
             catch { }
-        }
+        });
         foreach (var mod in mods.Where(m => m.Enabled && !string.IsNullOrWhiteSpace(m.ModrinthProjectId)))
         {
             try
