@@ -648,7 +648,7 @@
                             <TextBlock Text="📁" FontSize="20" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <ComboBox x:Name="InstanceFolderComboBox" Width="150" Height="34" Margin="0,0,8,8"
                                       SelectionChanged="InstanceFolderComboBox_SelectionChanged"/>
-                            <Button x:Name="ManageInstanceFoldersButton" Content="✿  分类管理" Padding="12,7" Margin="0,0,8,0"
+                            <Button x:Name="ManageInstanceFoldersButton" Content="▤  分类管理" Padding="12,7" Margin="0,0,8,0"
                                     Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}"
                                     Click="ManageInstanceFoldersButton_Click"/>
                             <Button Content="重命名" Padding="10,7" Margin="0,0,8,0" Click="RenameInstanceButton_Click"/>
