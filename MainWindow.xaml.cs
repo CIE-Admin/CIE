@@ -7,6 +7,8 @@ using System.IO;
 using System.IO.Compression;
 using Microsoft.Win32;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Media.Imaging;
 using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
@@ -29,6 +31,7 @@ public partial class MainWindow : Window
     private bool _isInstalling;
     private bool _launcherUpdateCheckInProgress;
     private bool _loadingGameSettings;
+    private readonly Random _sakuraRandom = new();
     internal static readonly string ProfileDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CIE", "profile");
     private static readonly HttpClient ModrinthClient = new() { Timeout = TimeSpan.FromSeconds(15) };
     private static readonly HttpClient McmodClient = new() { Timeout = TimeSpan.FromSeconds(7) };
@@ -63,6 +66,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AppVersionText.Text = $"Version {LauncherUpdateService.CurrentVersion.ToString(3)}";
+        HomePage.IsVisibleChanged += HomePage_IsVisibleChanged;
         LoadInstallRoot();
         LoadThemePreference();
         LoadOfflineProfile();
@@ -171,6 +176,7 @@ public partial class MainWindow : Window
         VioletThemeScene.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         ManageInstanceFoldersButton.Content = _isVioletTheme ? "✿  分类管理" : "▤  分类管理";
         ThemeToggleButton.ToolTip = _isBlueTheme ? "当前为蓝白主题，点击切换到黑白主题" : _isVioletTheme ? "当前为紫罗兰主题，点击切换到黑白主题" : "当前为黑白主题，点击切换到蓝白主题";
+        UpdateSakuraEffect();
         var logo = LoadBrandLogo(_isBlueTheme ? "CIE金属.png" : "CIE.png");
         if (logo is not null)
         {
@@ -202,9 +208,108 @@ public partial class MainWindow : Window
         catch (System.Windows.Markup.XamlParseException) { return null; }
     }
 
+    private void HomePage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateSakuraEffect();
+
+    private void UpdateSakuraEffect()
+    {
+        if (SakuraPetalCanvas is null) return;
+        var shouldShow = IsLoaded && _isVioletTheme && HomePage.IsVisible;
+        if (!shouldShow)
+        {
+            SakuraPetalCanvas.Visibility = Visibility.Collapsed;
+            ClearSakuraPetals();
+            return;
+        }
+        SakuraPetalCanvas.Visibility = Visibility.Visible;
+        if (SakuraPetalCanvas.ActualWidth < 20 || SakuraPetalCanvas.ActualHeight < 20)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateSakuraEffect));
+            return;
+        }
+        if (SakuraPetalCanvas.Children.Count == 0) CreateSakuraPetals();
+    }
+
+    private void CreateSakuraPetals()
+    {
+        const int petalCount = 24;
+        var colors = new[] { Color.FromRgb(244, 177, 207), Color.FromRgb(235, 157, 195), Color.FromRgb(255, 211, 226) };
+        for (var i = 0; i < petalCount; i++)
+        {
+            var width = 5 + _sakuraRandom.NextDouble() * 4;
+            var height = 7 + _sakuraRandom.NextDouble() * 5;
+            var petal = new Ellipse
+            {
+                Width = width,
+                Height = height,
+                Fill = new SolidColorBrush(colors[_sakuraRandom.Next(colors.Length)]),
+                Opacity = 0.55 + _sakuraRandom.NextDouble() * 0.25,
+                IsHitTestVisible = false,
+                RenderTransform = new TranslateTransform()
+            };
+            var transform = (TranslateTransform)petal.RenderTransform;
+            var state = new SakuraParticleState(petal, transform, TimeSpan.FromSeconds(8 + _sakuraRandom.NextDouble() * 7));
+            petal.Tag = state;
+            Canvas.SetLeft(petal, _sakuraRandom.NextDouble() * Math.Max(1, SakuraPetalCanvas.ActualWidth - width));
+            SakuraPetalCanvas.Children.Add(petal);
+            var startY = -16 + _sakuraRandom.NextDouble() * SakuraPetalCanvas.ActualHeight;
+            AnimateSakuraFall(state, startY, petal.Opacity);
+        }
+    }
+
+    private void AnimateSakuraFall(SakuraParticleState state, double startY, double opacity)
+    {
+        if (!SakuraPetalCanvas.IsVisible) return;
+        state.Transform.BeginAnimation(TranslateTransform.YProperty, null);
+        state.Transform.Y = startY;
+        var fall = new DoubleAnimation(startY, SakuraPetalCanvas.ActualHeight + 16, state.FallDuration)
+        {
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+        fall.Completed += (_, _) =>
+        {
+            if (!SakuraPetalCanvas.IsVisible) return;
+            state.RespawnTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            state.RespawnTimer.Tick += (_, _) =>
+            {
+                state.RespawnTimer?.Stop();
+                if (!SakuraPetalCanvas.IsVisible) return;
+                Canvas.SetLeft(state.Petal, _sakuraRandom.NextDouble() * Math.Max(1, SakuraPetalCanvas.ActualWidth - state.Petal.Width));
+                state.Transform.BeginAnimation(TranslateTransform.YProperty, null);
+                state.Transform.Y = -state.Petal.Height;
+                state.Petal.BeginAnimation(UIElement.OpacityProperty, null);
+                state.Petal.Opacity = 0;
+                state.Petal.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, opacity, TimeSpan.FromMilliseconds(700)));
+                AnimateSakuraFall(state, -state.Petal.Height, opacity);
+            };
+            state.RespawnTimer.Start();
+        };
+        state.Transform.BeginAnimation(TranslateTransform.YProperty, fall);
+    }
+
+    private void ClearSakuraPetals()
+    {
+        foreach (var petal in SakuraPetalCanvas.Children.OfType<Ellipse>())
+        {
+            if (petal.Tag is SakuraParticleState state) state.RespawnTimer?.Stop();
+            petal.BeginAnimation(UIElement.OpacityProperty, null);
+            if (petal.RenderTransform is TranslateTransform transform)
+                transform.BeginAnimation(TranslateTransform.YProperty, null);
+        }
+        SakuraPetalCanvas.Children.Clear();
+    }
+
+    private sealed class SakuraParticleState(Ellipse petal, TranslateTransform transform, TimeSpan fallDuration)
+    {
+        public Ellipse Petal { get; } = petal;
+        public TranslateTransform Transform { get; } = transform;
+        public TimeSpan FallDuration { get; } = fallDuration;
+        public DispatcherTimer? RespawnTimer { get; set; }
+    }
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         FitWindowToWorkArea();
+        UpdateSakuraEffect();
         LoadDownloadSourcePreference();
         LoadGamePerformanceSettings();
         LoadInstances();
@@ -2137,6 +2242,7 @@ public partial class MainWindow : Window
     {
         PageTitle.Text = "主页";
         HomePage.Visibility = Visibility.Visible;
+        UpdateSakuraEffect();
         DiagnosticsPage.Visibility = Visibility.Collapsed;
         VersionsPage.Visibility = Visibility.Collapsed;
         SettingsPage.Visibility = Visibility.Collapsed;
