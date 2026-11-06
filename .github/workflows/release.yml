@@ -1,0 +1,77 @@
+name: Build and publish CIE release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore project
+        run: dotnet restore CIE.csproj
+
+      - name: Build update package and installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Release tag must look like v1.2.3: $env:GITHUB_REF_NAME" }
+          $env:CIE_RELEASE_VERSION = $version
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'dist'
+          $appStage = Join-Path $dist 'CIE-Update-Stage'
+          $runtimeStage = Join-Path $dist 'CIE-Test\App\runtime'
+          $updateZip = Join-Path $dist 'CIE-Update.zip'
+          New-Item -ItemType Directory -Path $appStage -Force | Out-Null
+          New-Item -ItemType Directory -Path $runtimeStage -Force | Out-Null
+
+          dotnet publish CIE.csproj -c Release --no-restore -o $appStage `
+            -p:PublishSingleFile=false -p:Version=$version -p:AssemblyVersion="$version.0" `
+            -p:FileVersion="$version.0" -p:InformationalVersion=$version
+          if ($LASTEXITCODE -ne 0) { throw "Publish failed: $LASTEXITCODE" }
+
+          $installerScript = Join-Path $env:TEMP 'dotnet-install.ps1'
+          Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installerScript
+          & $installerScript -Channel 10.0 -Runtime windowsdesktop -Architecture x64 -InstallDir $runtimeStage
+          if ($LASTEXITCODE -ne 0) { throw "Desktop runtime installation failed: $LASTEXITCODE" }
+
+          $updateFiles = @('CIE.exe', 'CIE.dll', 'CIE.deps.json', 'CIE.runtimeconfig.json')
+          $updateStage = Join-Path $dist 'CIE-Update-Package'
+          New-Item -ItemType Directory -Path $updateStage -Force | Out-Null
+          foreach ($name in $updateFiles) {
+            $source = Join-Path $appStage $name
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Missing update file: $name" }
+            Copy-Item -LiteralPath $source -Destination $updateStage
+          }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          if (Test-Path -LiteralPath $updateZip) { Remove-Item -LiteralPath $updateZip -Force }
+          [System.IO.Compression.ZipFile]::CreateFromDirectory($updateStage, $updateZip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          $hash = (Get-FileHash -LiteralPath $updateZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          [System.IO.File]::WriteAllText("$updateZip.sha256", "$hash  CIE-Update.zip`n", [System.Text.Encoding]::ASCII)
+
+          & .\packaging\Build-SingleFileInstaller.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed: $LASTEXITCODE" }
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            dist/CIE-Installer.exe
+            dist/CIE-Update.zip
+            dist/CIE-Update.zip.sha256
+
