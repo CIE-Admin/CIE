@@ -483,7 +483,7 @@
                             <TextBlock Text="离线账号说明" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
                             <TextBlock Text="CIE 使用本地昵称启动，不会进行微软正版登录。只有关闭正版验证的服务器允许离线账号加入；开启正版验证的服务器仍会拒绝。"
                                        Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,12" TextWrapping="Wrap"/>
-                            <TextBlock Text="<TextBlock Margin="0,0,0,14"><Hyperlink NavigateUri="https://wiki.server-federation.top/zh/CIE%E9%9B%86%E5%9B%A2CIE%E7%A4%BE%E5%9B%A2%E5%8E%86%E5%8F%B2" RequestNavigate="WikiLink_RequestNavigate">打开 CIE Wiki</Hyperlink></TextBlock>
+                            <TextBlock Margin="0,0,0,14"><Hyperlink NavigateUri="https://wiki.server-federation.top/zh/CIE%E9%9B%86%E5%9B%A2CIE%E7%A4%BE%E5%9B%A2%E5%8E%86%E5%8F%B2" RequestNavigate="WikiLink_RequestNavigate">打开 CIE Wiki</Hyperlink></TextBlock>
                             <TextBlock Text="遇到问题？欢迎加入 QQ 群反馈：928579066" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,18"/>
                             <Button Content="删除 CIE 启动器…" HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,20"
                                     Click="UninstallLauncherButton_Click"/>
