@@ -16,27 +16,31 @@ public partial class CategoryManagerWindow : Window
 {
     private readonly List<string> _folders;
     private readonly IReadOnlyList<InstanceProfile> _profiles;
-    private readonly InstanceProfile? _selectedProfile;
+    private readonly IReadOnlyList<InstanceProfile> _selectedProfiles;
     private readonly string _iconDirectory;
     private bool _loading;
 
     public IReadOnlyList<string> FolderNames => _folders;
 
     public CategoryManagerWindow(List<string> folders, IReadOnlyList<InstanceProfile> profiles,
-        InstanceProfile? selectedProfile, string iconDirectory)
+        IReadOnlyList<InstanceProfile> selectedProfiles, string iconDirectory)
     {
         InitializeComponent();
         _folders = folders;
         _profiles = profiles;
-        _selectedProfile = selectedProfile;
+        _selectedProfiles = selectedProfiles;
         _iconDirectory = iconDirectory;
         Directory.CreateDirectory(_iconDirectory);
-        SelectedVersionText.Text = selectedProfile is null
-            ? "先在“已安装版本”页面选择版本，再打开分类管理即可为它归类。"
-            : $"正在管理版本：{selectedProfile.DisplayName}";
-        AssignHintText.Text = selectedProfile is null
-            ? "当前没有选中的版本。可以先管理分类，之后再选择版本归类。"
-            : $"将“{selectedProfile.DisplayName}”放入所选文件夹。";
+        SelectedVersionText.Text = selectedProfiles.Count == 0
+            ? "管理分类文件夹；也可以先在已安装版本中多选，再一次归类。"
+            : selectedProfiles.Count == 1
+                ? $"正在管理版本：{selectedProfiles[0].DisplayName}"
+                : $"已多选 {selectedProfiles.Count} 个版本，可将它们一起归入同一分类。";
+        AssignHintText.Text = selectedProfiles.Count == 0
+            ? "没有选中版本。可先建立或整理分类，然后返回列表多选版本并批量归类。"
+            : selectedProfiles.Count == 1
+                ? $"将“{selectedProfiles[0].DisplayName}”放入所选文件夹。"
+                : $"将已选中的 {selectedProfiles.Count} 个版本批量放入同一文件夹。";
         RefreshFolderList();
         RefreshAssignmentChoices();
     }
@@ -55,9 +59,9 @@ public partial class CategoryManagerWindow : Window
     {
         _loading = true;
         AssignFolderComboBox.ItemsSource = new[] { "未分类" }.Concat(_folders).ToList();
-        var folder = _selectedProfile?.VirtualFolder ?? "";
-        AssignFolderComboBox.SelectedItem = string.IsNullOrEmpty(folder) ? "未分类" : folder;
-        AssignFolderComboBox.IsEnabled = _selectedProfile is not null;
+        var folders = _selectedProfiles.Select(profile => profile.VirtualFolder ?? "").Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        AssignFolderComboBox.SelectedItem = folders.Count == 1 ? (string.IsNullOrEmpty(folders[0]) ? "未分类" : folders[0]) : null;
+        AssignFolderComboBox.IsEnabled = _selectedProfiles.Count > 0;
         _loading = false;
     }
 
@@ -70,8 +74,9 @@ public partial class CategoryManagerWindow : Window
 
     private void AssignFolderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loading || _selectedProfile is null || AssignFolderComboBox.SelectedItem is not string folder) return;
-        _selectedProfile.VirtualFolder = folder == "未分类" ? "" : folder;
+        if (_loading || _selectedProfiles.Count == 0 || AssignFolderComboBox.SelectedItem is not string folder) return;
+        var target = folder == "未分类" ? "" : folder;
+        foreach (var profile in _selectedProfiles) profile.VirtualFolder = target;
     }
 
     private void CreateFolder_Click(object sender, RoutedEventArgs e)
