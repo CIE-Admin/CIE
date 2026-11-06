@@ -218,9 +218,6 @@ public partial class MainWindow : Window
     {
         if (_launcherUpdateCheckInProgress) return;
         var lastCheckPath = Path.Combine(ProfileDirectory, "last-launcher-update-check.txt");
-        if (!reportUpToDate && File.Exists(lastCheckPath)
-            && DateTime.UtcNow - File.GetLastWriteTimeUtc(lastCheckPath) < TimeSpan.FromHours(8))
-            return;
         _launcherUpdateCheckInProgress = true;
         CheckLauncherUpdatesButton.IsEnabled = false;
         LauncherUpdateStatusText.Text = "正在检查 GitHub 更新…";
@@ -239,8 +236,12 @@ public partial class MainWindow : Window
 
             LauncherUpdateStatusText.Text = $"发现新版本 {update.Version}。";
             if (!promptToInstall) return;
+            var releaseNotes = string.IsNullOrWhiteSpace(update.ReleaseNotes)
+                ? "本次版本暂无更新说明。"
+                : update.ReleaseNotes.Trim();
+            if (releaseNotes.Length > 1200) releaseNotes = releaseNotes[..1200] + "…";
             if (MessageBox.Show(this,
-                $"发现 CIE 新版本 {update.Version}，当前版本为 {LauncherUpdateService.CurrentVersion}。\n\n现在下载并更新吗？更新完成后会重新启动 CIE。游戏、模组和存档不会更改。",
+                $"发现 CIE 新版本 {update.Version}，当前版本为 {LauncherUpdateService.CurrentVersion}。\n\n更新内容：\n{releaseNotes}\n\n现在下载并更新吗？更新完成后会重新启动 CIE。游戏、模组和存档不会更改。",
                 "发现 CIE 更新", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
                 return;
 
@@ -2357,7 +2358,7 @@ internal sealed class MinecraftInstaller
     {
         if (tasks.Count == 0) { progress.Report(new(phase, end)); return; }
         var completed = 0;
-        using var semaphore = new SemaphoreSlim(8);
+        using var semaphore = new SemaphoreSlim(16);
         await Task.WhenAll(tasks.Select(async task =>
         {
             await semaphore.WaitAsync();
