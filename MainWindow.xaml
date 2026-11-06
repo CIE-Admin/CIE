@@ -31,6 +31,32 @@
         <SolidColorBrush x:Key="OnAccentTextBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="ThemeToggleHoverBrush" Color="#287FAE"/>
 
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource AccentLightBrush}"/><Setter Property="Foreground" Value="{DynamicResource OnAccentTextBrush}"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource AccentHoverBrush}"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.55"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 按钮基础样式 -->
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource NavTextBrush}"/>
@@ -619,10 +645,12 @@
                                   DisplayMemberPath="DisplayName" SelectionChanged="InstancesListView_SelectionChanged"/>
                         <WrapPanel Grid.Row="3" HorizontalAlignment="Stretch" Margin="0,14,0,0">
                             <TextBlock Text="分类" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <ComboBox x:Name="InstanceFolderComboBox" Width="140" Height="32" Margin="0,0,8,8"
+                            <TextBlock Text="📁" FontSize="20" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox x:Name="InstanceFolderComboBox" Width="150" Height="34" Margin="0,0,8,8"
                                       SelectionChanged="InstanceFolderComboBox_SelectionChanged"/>
-                            <Button Content="新建分类" Padding="10,7" Margin="0,0,8,0" Click="CreateInstanceFolderButton_Click"/>
-                            <Button Content="归入分类" Padding="10,7" Margin="0,0,8,0" Click="AssignInstanceFolderButton_Click"/>
+                            <Button x:Name="ManageInstanceFoldersButton" Content="✿  分类管理" Padding="12,7" Margin="0,0,8,0"
+                                    Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}"
+                                    Click="ManageInstanceFoldersButton_Click"/>
                             <Button Content="重命名" Padding="10,7" Margin="0,0,8,0" Click="RenameInstanceButton_Click"/>
                             <Button Content="打开游戏目录" Padding="14,8" Margin="0,0,10,0" Click="OpenInstanceFolderButton_Click"/>
                             <Button Content="卸载所选版本" Padding="14,8" Margin="0,0,10,0" Click="UninstallSelectedInstanceButton_Click"/>
