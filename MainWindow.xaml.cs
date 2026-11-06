@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Microsoft.Win32;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
     private List<MinecraftVersion> _versions = [];
     private List<InstanceProfile> _instances = [];
     private List<ModrinthProjectHit> _modrinthHits = [];
+    private readonly Dictionary<string, string?> _modrinthIconCache = new(StringComparer.OrdinalIgnoreCase);
     private ModrinthVersionInfo? _selectedModrinthVersion;
     private List<string> _modrinthPrerequisiteNames = [];
     private bool _isInstalling;
@@ -910,6 +912,24 @@ public partial class MainWindow : Window
         CheckModDependenciesAndOrder(mods);
         ModsStatusText.Text = "正在读取 MOD 信息并检查可识别的 Modrinth 更新…";
         ModsListView.ItemsSource = mods;
+        foreach (var mod in mods.Where(m => !string.IsNullOrWhiteSpace(m.ModrinthProjectId)))
+        {
+            try
+            {
+                if (!_modrinthIconCache.TryGetValue(mod.ModrinthProjectId!, out var iconUrl))
+                {
+                    using var iconRequest = new HttpRequestMessage(HttpMethod.Get, $"https://api.modrinth.com/v2/project/{Uri.EscapeDataString(mod.ModrinthProjectId!)}");
+                    iconRequest.Headers.UserAgent.ParseAdd("CIE-Launcher/0.1.0 (desktop launcher)");
+                    using var iconResponse = await ModrinthClient.SendAsync(iconRequest);
+                    iconResponse.EnsureSuccessStatusCode();
+                    using var iconJson = System.Text.Json.JsonDocument.Parse(await iconResponse.Content.ReadAsStreamAsync());
+                    iconUrl = iconJson.RootElement.TryGetProperty("icon_url", out var icon) && icon.ValueKind == System.Text.Json.JsonValueKind.String ? icon.GetString() : null;
+                    _modrinthIconCache[mod.ModrinthProjectId!] = iconUrl;
+                }
+                mod.IconUrl = iconUrl;
+            }
+            catch { }
+        }
         foreach (var mod in mods.Where(m => m.Enabled && !string.IsNullOrWhiteSpace(m.ModrinthProjectId)))
         {
             try
@@ -1718,6 +1738,8 @@ public partial class MainWindow : Window
             .OrderByDescending(p => p.LastPlayed)
             .ThenBy(p => p.GameVersion, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        foreach (var profile in _instances)
+            profile.IconSource = LoadInstanceIcon(profile) ?? CategoryManagerWindow.DefaultFolderIcon();
         InstancesListView.ItemsSource = _instances;
         RefreshInstanceFolderChoices();
         RefreshHomeInstances();
@@ -1831,7 +1853,8 @@ public partial class MainWindow : Window
     private void ManageInstanceFoldersButton_Click(object sender, RoutedEventArgs e)
     {
         var folders = LoadInstanceFolders();
-        var dialog = new CategoryManagerWindow(folders, _instances, SelectedInstance, InstanceFolderIconsDirectory)
+        var selectedProfiles = InstancesListView.SelectedItems.Cast<InstanceProfile>().ToList();
+        var dialog = new CategoryManagerWindow(folders, _instances, selectedProfiles, InstanceFolderIconsDirectory)
         {
             Owner = this
         };
@@ -1868,6 +1891,74 @@ public partial class MainWindow : Window
         FilterInstalledInstances();
         InstancesStatusText.Text = string.IsNullOrEmpty(profile.VirtualFolder)
             ? $"已将 {profile.DisplayName} 移出分类。" : $"已将版本归入“{profile.VirtualFolder}”。";
+    }
+
+    private string InstanceIconsDirectory => Path.Combine(ProfileDirectory, "version-icons");
+
+    private string InstanceIconPath(InstanceProfile profile)
+    {
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profile.Id))).ToLowerInvariant();
+        return Path.Combine(InstanceIconsDirectory, hash + ".png");
+    }
+
+    private BitmapSource? LoadInstanceIcon(InstanceProfile profile)
+    {
+        var path = InstanceIconPath(profile);
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 96;
+            image.UriSource = new Uri(path);
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch { return null; }
+    }
+
+    private void ChooseInstanceIconButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedInstance is not { } profile) { InstancesStatusText.Text = "请先选择一个版本，再设置它的图标。"; return; }
+        var dialog = new OpenFileDialog { Title = "选择版本图标", Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp|所有文件|*.*", Multiselect = false };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            if (new FileInfo(dialog.FileName).Length > 20L * 1024 * 1024) throw new InvalidDataException("图片文件不能超过 20 MB。");
+            using var input = File.OpenRead(dialog.FileName);
+            var decoder = BitmapDecoder.Create(input, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames.FirstOrDefault() ?? throw new InvalidDataException("无法读取图片。");
+            if (frame.PixelWidth > 4096 || frame.PixelHeight > 4096 || (long)frame.PixelWidth * frame.PixelHeight > 16_777_216)
+                throw new InvalidDataException("图片尺寸不能超过 4096×4096 像素。");
+            SaveInstanceIcon(frame, InstanceIconPath(profile));
+            profile.IconSource = LoadInstanceIcon(profile);
+            InstancesListView.Items.Refresh();
+            InstancesStatusText.Text = $"已更新“{profile.DisplayName}”的图标。";
+        }
+        catch (Exception ex) { MessageBox.Show(this, $"无法设置版本图标：{ex.Message}", "版本图标", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
+    private static void SaveInstanceIcon(BitmapSource source, string destination)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        const int size = 96;
+        var scale = Math.Min(size / (double)source.PixelWidth, size / (double)source.PixelHeight);
+        var width = Math.Max(1, (int)Math.Round(source.PixelWidth * scale));
+        var height = Math.Max(1, (int)Math.Round(source.PixelHeight * scale));
+        var visual = new DrawingVisual();
+        using (var context = visual.RenderOpen())
+        {
+            var image = new TransformedBitmap(source, new ScaleTransform(width / (double)source.PixelWidth, height / (double)source.PixelHeight));
+            context.DrawImage(image, new Rect((size - width) / 2d, (size - height) / 2d, width, height));
+        }
+        var rendered = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        rendered.Render(visual);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rendered));
+        using var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+        encoder.Save(output);
     }
 
     private void RenameInstanceButton_Click(object sender, RoutedEventArgs e)
@@ -2069,6 +2160,7 @@ public partial class MainWindow : Window
 internal sealed record ModEntry(string Path, string Name, string ModVersion, bool Enabled, string Compatibility, string? ModrinthProjectId,
     string ModId, string[] Dependencies, string[] LoadAfter, string[] LoadBefore)
 {
+    public string? IconUrl { get; set; }
     public string UpdateStatus { get; set; } = string.IsNullOrWhiteSpace(ModrinthProjectId) ? "手动检查" : "待检查";
     public string DependencyStatus { get; set; } = "待检查";
     public string LoadOrderStatus { get; set; } = "待检查";
