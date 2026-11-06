@@ -487,9 +487,8 @@
                             <TextBlock Text="遇到问题？欢迎加入 QQ 群反馈：928579066" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,18"/>
                             <Button Content="删除 CIE 启动器…" HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,20"
                                     Click="UninstallLauncherButton_Click"/>
-                            <TextBlock Text="宇宙级安全免责声明" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,0"/>
-                            <TextBlock Text="请把启动器当作一把通往宇宙的钥匙：只从可信来源导入游戏、整合包、MOD 与皮肤；第三方内容可能包含错误、恶意代码或不兼容文件。CIE 不对第三方文件的安全性、可用性、数据损失、存档损坏、设备或网络影响作保证。运行前请自行核验来源并备份重要文件。离线昵称仅用于本地身份标识，不代表正版授权；遵守 Minecraft 使用条款、服务器规则及适用法律。使用本启动器即表示你理解并自行承担相关风险。宇宙很大，备份很重要。"
-                                       Foreground="{DynamicResource SubtleTextBrush}" Margin="0,8,0,22" TextWrapping="Wrap"/>
+                            <Button Content="安全声明" HorizontalAlignment="Left" Padding="14,8" Margin="0,20,0,22"
+                                    Click="SafetyDeclarationButton_Click"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
