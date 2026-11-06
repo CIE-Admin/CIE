@@ -117,6 +117,19 @@ public partial class MainWindow : Window
         ApplyTheme();
     }
 
+    private void WikiLink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"无法打开 Wiki 页面：{ex.Message}", "CIE", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        e.Handled = true;
+    }
+
     private void ApplyTheme()
     {
         var colors = _isVioletTheme
@@ -153,6 +166,7 @@ public partial class MainWindow : Window
 
         Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme || _isVioletTheme ? "#111111" : "#287FAE"));
         VioletEasterEggText.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
+        VioletThemeScene.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         ThemeToggleButton.ToolTip = _isBlueTheme ? "当前为蓝白主题，点击切换到黑白主题" : _isVioletTheme ? "当前为紫罗兰主题，点击切换到黑白主题" : "当前为黑白主题，点击切换到蓝白主题";
         var logo = LoadBrandLogo(_isBlueTheme ? "CIE金属.png" : "CIE.png");
         if (logo is not null)
