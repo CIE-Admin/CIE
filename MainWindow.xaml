@@ -31,6 +31,27 @@
         <SolidColorBrush x:Key="OnAccentTextBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="ThemeToggleHoverBrush" Color="#287FAE"/>
 
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/><Setter Property="Background" Value="{DynamicResource InputBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderBrushColor}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox"><Grid>
+                <Border x:Name="ComboSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10"/>
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                    <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Left" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" IsHitTestVisible="False"/>
+                    <ToggleButton Grid.ColumnSpan="2" Background="Transparent" BorderThickness="0" Focusable="False" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"><TextBlock Text="⌄" FontSize="16" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,11,2"/></ToggleButton>
+                </Grid>
+                <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" Focusable="False" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="1" CornerRadius="10" Padding="4" Margin="0,4,0,0" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                        <ScrollViewer MaxHeight="320" CanContentScroll="True" VerticalScrollBarVisibility="Auto"><ItemsPresenter/></ScrollViewer>
+                    </Border>
+                </Popup>
+            </Grid><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ComboSurface" Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="ComboSurface" Property="Opacity" Value="0.55"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style TargetType="ComboBoxItem"><Setter Property="Padding" Value="10,7"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="ItemSurface" Background="Transparent" CornerRadius="7" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource SurfaceBrush}"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+        <Style TargetType="ScrollBar"><Setter Property="Width" Value="10"/><Setter Property="Background" Value="Transparent"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True" IsEnabled="{TemplateBinding IsEnabled}">
+            <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.LineUpCommand" Opacity="0" IsHitTestVisible="False"/></Track.DecreaseRepeatButton>
+            <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border x:Name="ThumbSurface" Background="{DynamicResource BorderBrushColor}" CornerRadius="5" Margin="2,1"/><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource AccentLightBrush}"/></Trigger><Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource AccentBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+            <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.LineDownCommand" Opacity="0" IsHitTestVisible="False"/></Track.IncreaseRepeatButton></Track></ControlTemplate></Setter.Value></Setter></Style>
+
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
@@ -395,7 +416,10 @@
                         <TextBlock x:Name="VersionsStatusText" Grid.Row="1" Text="正在加载版本清单…"
                                    Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,14,0,14" TextWrapping="Wrap"/>
                         <ListView x:Name="VersionsListView" Grid.Row="2" Margin="6" Background="{DynamicResource SurfaceBrush}"
-                                  Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" DisplayMemberPath="DisplayName"/>
+                                  Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0">
+                            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="Margin" Value="4,3"/><Setter Property="Padding" Value="10,6"/><Setter Property="BorderThickness" Value="0"/></Style></ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/></DataTemplate></ListView.ItemTemplate>
+                        </ListView>
                         <DockPanel Grid.Row="3" Margin="0,8,0,0">
                             <Button Content="选择下载位置" DockPanel.Dock="Right" Padding="12,7" Margin="8,0,0,0"
                                     Click="ChooseInstallRootButton_Click"/>
@@ -568,8 +592,9 @@
                             <TabItem Header="已安装模组">
                                 <Grid Background="{DynamicResource SurfaceBrush}">
                                     <ListView x:Name="ModsListView" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0">
+                                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="MinHeight" Value="58"/><Setter Property="Padding" Value="4,4"/></Style></ListView.ItemContainerStyle>
                                         <ListView.View><GridView>
-                                            <GridViewColumn Header="模组文件" Width="180" DisplayMemberBinding="{Binding Name}"/>
+                                            <GridViewColumn Header="模组文件" Width="205"><GridViewColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Border Width="34" Height="34" CornerRadius="7" Background="{DynamicResource CardBrush}" Margin="4,0,8,0"><Image Source="{Binding IconUrl}" Width="30" Height="30" Stretch="UniformToFill"/></Border><TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="150"/></StackPanel></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                                             <GridViewColumn Header="版本与检查" Width="450" DisplayMemberBinding="{Binding Summary}"/>
                                             <GridViewColumn Header="更新" Width="85" DisplayMemberBinding="{Binding UpdateStatus}"/>
                                             <GridViewColumn Header="状态" Width="70" DisplayMemberBinding="{Binding EnabledLabel}"/>
@@ -642,7 +667,10 @@
                         <TextBlock x:Name="InstancesStatusText" Grid.Row="1" Text="选择一个版本作为启动目标，也可以导入 PCL2 的游戏目录。"
                                    Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,14" TextWrapping="Wrap"/>
                         <ListView x:Name="InstancesListView" Grid.Row="2" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0"
-                                  DisplayMemberPath="DisplayName" SelectionChanged="InstancesListView_SelectionChanged"/>
+                                  SelectionMode="Extended" SelectionChanged="InstancesListView_SelectionChanged">
+                            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="Margin" Value="8,5"/><Setter Property="Padding" Value="0"/></Style></ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate><DataTemplate><Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="1" CornerRadius="12" Padding="11"><Grid MinHeight="54"><Grid.ColumnDefinitions><ColumnDefinition Width="58"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Width="48" Height="48" CornerRadius="9" Background="{DynamicResource SurfaceBrush}" VerticalAlignment="Center"><Image Source="{Binding IconSource}" Width="44" Height="44" Stretch="UniformToFill"/></Border><StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0"><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding GameVersion, StringFormat=Minecraft {0}}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"/></StackPanel></Grid></Border></DataTemplate></ListView.ItemTemplate>
+                        </ListView>
                         <WrapPanel Grid.Row="3" HorizontalAlignment="Stretch" Margin="0,14,0,0">
                             <TextBlock Text="分类" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <Image x:Name="InstanceFolderIconImage" Width="24" Height="24" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -652,6 +680,7 @@
                                     Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}"
                                     Click="ManageInstanceFoldersButton_Click"/>
                             <Button Content="重命名" Padding="10,7" Margin="0,0,8,0" Click="RenameInstanceButton_Click"/>
+                            <Button Content="版本图标" Padding="10,7" Margin="0,0,8,0" Click="ChooseInstanceIconButton_Click"/>
                             <Button Content="打开游戏目录" Padding="14,8" Margin="0,0,10,0" Click="OpenInstanceFolderButton_Click"/>
                             <Button Content="卸载所选版本" Padding="14,8" Margin="0,0,10,0" Click="UninstallSelectedInstanceButton_Click"/>
                             <Button Content="启动所选版本" Padding="18,9" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}" Click="LaunchSelectedInstanceButton_Click"/>
