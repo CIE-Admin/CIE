@@ -74,4 +74,3 @@ jobs:
             dist/CIE-Installer.exe
             dist/CIE-Update.zip
             dist/CIE-Update.zip.sha256
-

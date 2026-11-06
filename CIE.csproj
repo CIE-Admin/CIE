@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\CIE.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The WinForms bootstrapper is compiled separately by Build-SingleFileInstaller.ps1. -->
+    <Compile Remove="packaging\InstallerHost.cs" />
+    <Compile Remove="packaging\UpdaterHost.cs" />
+    <!-- Logo PNGs are WPF resources, embedded into CIE.dll and carried by published builds. -->
+    <Resource Include="Assets\*.png" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,668 @@
+<Window x:Class="CIE.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CIE Launcher"
+        Height="780"
+        Width="1280"
+        MinHeight="620"
+        MinWidth="960"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <Window.Resources>
+
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F4F4"/>
+        <SolidColorBrush x:Key="NavBackgroundBrush" Color="#101010"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#F1F1F1"/>
+        <SolidColorBrush x:Key="BorderBrushColor" Color="#CCCCCC"/>
+        <SolidColorBrush x:Key="SurfaceAltBrush" Color="#E8E8E8"/>
+        <SolidColorBrush x:Key="InputBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="MutedDimBrush" Color="#666666"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#111111"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#333333"/>
+        <SolidColorBrush x:Key="AccentLightBrush" Color="#555555"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#111111"/>
+        <SolidColorBrush x:Key="BrandNameBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#444444"/>
+        <SolidColorBrush x:Key="SubtleTextBrush" Color="#555555"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#666666"/>
+        <SolidColorBrush x:Key="NavTextBrush" Color="#DDDDDD"/>
+        <SolidColorBrush x:Key="OnAccentTextBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeToggleHoverBrush" Color="#287FAE"/>
+
+        <!-- 按钮基础样式 -->
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource NavTextBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 主启动按钮样式 -->
+        <Style x:Key="LaunchButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentTextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="Width" Value="190"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="10">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ThemeToggleStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="HoverBorder" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HoverBorder" Property="Background" Value="{DynamicResource ThemeToggleHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧导航栏 -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource NavBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrushColor}"
+                BorderThickness="0,0,1,0">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="90"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="70"/>
+                </Grid.RowDefinitions>
+
+                <!-- Logo / theme toggle -->
+                <Button x:Name="ThemeToggleButton" Grid.Row="0" Click="ThemeToggleButton_Click"
+                        Background="Transparent" BorderThickness="0" Padding="0" Margin="14,0"
+                        Style="{StaticResource ThemeToggleStyle}"
+                        HorizontalContentAlignment="Stretch" VerticalAlignment="Center"
+                        ToolTip="点击切换黑白 / 蓝白主题">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="1" Padding="4">
+                            <Grid>
+                                <Image x:Name="BrandLogoImage" Stretch="Uniform"/>
+                                <TextBlock x:Name="BrandLogoFallback" Text="CIE" FontSize="15" FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="CIE" Foreground="{DynamicResource BrandNameBrush}" FontSize="19" FontWeight="Bold"/>
+                            <TextBlock Text="LAUNCHER" Foreground="{DynamicResource MutedBrush}" FontSize="10"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Button>
+
+                <!-- 导航按钮 -->
+                <StackPanel Grid.Row="1" Margin="12,10">
+
+                    <Button Content="⌂    主页"
+                            Style="{StaticResource NavButton}"
+                            Click="HomeButton_Click"/>
+
+                    <Button Content="▣    版本管理"
+                            Style="{StaticResource NavButton}"
+                            Click="VersionsButton_Click"/>
+
+                    <Button Content="▤    已安装版本"
+                            Style="{StaticResource NavButton}"
+                            Click="InstancesButton_Click"/>
+
+                    <Button Content="▧    MOD 管理"
+                            Style="{StaticResource NavButton}"
+                            Click="ModsButton_Click"/>
+
+                    <Button Content="⚙    设置"
+                            Style="{StaticResource NavButton}"
+                            Click="SettingsButton_Click"/>
+
+                    <Button Content="◇    故障排查"
+                            Style="{StaticResource NavButton}"
+                            Click="DiagnosticsButton_Click"/>
+
+                </StackPanel>
+
+                <!-- 底部版本 -->
+                <StackPanel Grid.Row="2"
+                            VerticalAlignment="Center"
+                            Margin="22,0">
+
+                    <TextBlock Text="CIE LAUNCHER"
+                               Foreground="{DynamicResource MutedDimBrush}"
+                               FontSize="10"/>
+
+                    <TextBlock Text="Version 0.1.0"
+                               Foreground="{DynamicResource SubtleTextBrush}"
+                               FontSize="12"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
+        <!-- 右侧主内容 -->
+        <Grid Grid.Column="1" Margin="32">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="50"/>
+            </Grid.RowDefinitions>
+
+            <!-- 顶部标题 -->
+            <Grid Grid.Row="0">
+                <TextBlock x:Name="PageTitle"
+                           Text="主页"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="MINECRAFT JAVA EDITION"
+                           Foreground="{DynamicResource MutedBrush}"
+                           FontSize="11"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- 主页内容 -->
+            <Grid x:Name="HomePage"
+                  Grid.Row="1"
+                  Margin="0,20,0,20" AllowDrop="True" DragOver="HomePage_DragOver" Drop="HomePage_Drop">
+
+                <Border Background="{DynamicResource CardBrush}"
+                        CornerRadius="18"
+                        Padding="30">
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 游戏介绍 -->
+                        <StackPanel Grid.Row="0"
+                                    VerticalAlignment="Center">
+
+                            <TextBlock Text="YOUR NEXT ADVENTURE"
+                                       Foreground="{DynamicResource AccentLightBrush}"
+                                       FontSize="12"
+                                       FontWeight="Bold"/>
+
+                            <TextBlock Text="Minecraft"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                       FontSize="48"
+                                       FontWeight="Bold"
+                                       Margin="0,12,0,0"/>
+
+                            <TextBlock Text="准备好开始你的下一场冒险了吗？"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       FontSize="15"
+                                       Margin="0,8,0,0"/>
+                            <TextBlock Text="也可以将整合包 .zip / .mrpack 拖到主页或版本管理页安装"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,5,0,0"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0" VerticalAlignment="Center">
+                                <Button x:Name="HomeSkinButton" Padding="2" Width="48" Height="48" Click="OpenSkinWardrobeButton_Click"
+                                        Background="{DynamicResource SurfaceBrush}" BorderThickness="0" ToolTip="打开皮肤衣柜">
+                                    <Image x:Name="SkinPreviewImage" Stretch="Uniform"/>
+                                </Button>
+                                <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="离线玩家" Foreground="{DynamicResource SubtleTextBrush}" FontSize="12"/>
+                                    <DockPanel Margin="0,4,0,0">
+                                        <Button Content="保存" DockPanel.Dock="Right" Padding="10,4" Click="SaveOfflineNameButton_Click"/>
+                                        <TextBox x:Name="OfflineNameTextBox" Text="Player" Width="150" Height="30" Padding="6,3"/>
+                                    </DockPanel>
+                                </StackPanel>
+                                <ComboBox x:Name="PlayerHistoryComboBox" Width="150" Height="30" Margin="10,17,0,0"
+                                          ToolTip="切换最近使用的离线昵称" SelectionChanged="PlayerHistoryComboBox_SelectionChanged"/>
+                                <Button Content="×" Width="26" Height="26" Margin="4,17,0,0" Padding="0"
+                                        ToolTip="删除所选历史玩家 ID" Click="DeletePlayerHistoryButton_Click"/>
+                                <Button Content="皮肤衣柜" Margin="10,17,0,0" Padding="12,5" Click="OpenSkinWardrobeButton_Click"/>
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource SurfaceAltBrush}"
+                                    CornerRadius="8"
+                                    Padding="14"
+                                    Margin="0,30,0,0"
+                                    HorizontalAlignment="Left">
+
+                                <StackPanel>
+                                    <TextBlock Text="游戏版本"
+                                               Foreground="{DynamicResource SubtleTextBrush}"
+                                               FontSize="12"/>
+
+                                    <ComboBox x:Name="VersionComboBox"
+                                              Width="220"
+                                              Height="35"
+                                              Margin="0,8,0,0"
+                                              Background="{DynamicResource InputBrush}"
+                                              Foreground="Black"
+                                              BorderThickness="0"
+                                              DisplayMemberPath="DisplayName"/>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+
+                        <!-- 启动按钮 -->
+                        <StackPanel Grid.Row="1"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Bottom">
+
+                            <Button x:Name="HomeLaunchButton" Content="▶   启动游戏"
+                                    Style="{StaticResource LaunchButton}"
+                                    Click="LaunchButton_Click"/>
+
+                            <StackPanel Margin="20,0"
+                                        VerticalAlignment="Center">
+
+                                <TextBlock x:Name="GameStatusText"
+                                           Text="游戏尚未启动"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           FontSize="13"/>
+
+                                <TextBlock Text="Minecraft Java Edition"
+                                           Foreground="{DynamicResource MutedDimBrush}"
+                                           FontSize="11"
+                                           Margin="0,5,0,0"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- 版本管理页面 -->
+            <Grid x:Name="VersionsPage" Grid.Row="1" Visibility="Collapsed" Margin="0,20,0,20"
+                  AllowDrop="True" DragOver="ModpackDrop_DragOver" Drop="ModpackDrop_Drop">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="18" Padding="30">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0">
+                            <Button x:Name="RefreshVersionsButton" Content="刷新版本" DockPanel.Dock="Right"
+                                    Padding="16,9" Foreground="{DynamicResource OnAccentTextBrush}" Background="{DynamicResource AccentBrush}" BorderThickness="0"
+                                    Cursor="Hand" Click="RefreshVersionsButton_Click"/>
+                            <Button Content="导入整合包 (.zip)" DockPanel.Dock="Right" Margin="0,0,8,0" Padding="14,9"
+                                    Click="ImportModpackButton_Click"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Minecraft 版本" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24"
+                                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="VersionCategoryComboBox" Width="150" Height="32" Margin="20,0,0,0"
+                                          SelectedIndex="0" SelectionChanged="VersionCategoryComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="正式版"/>
+                                    <ComboBoxItem Content="快照版"/>
+                                    <ComboBoxItem Content="节日/特别版"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock x:Name="VersionsStatusText" Grid.Row="1" Text="正在加载版本清单…"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,14,0,14" TextWrapping="Wrap"/>
+                        <ListView x:Name="VersionsListView" Grid.Row="2" Margin="6" Background="{DynamicResource SurfaceBrush}"
+                                  Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" DisplayMemberPath="DisplayName"/>
+                        <DockPanel Grid.Row="3" Margin="0,8,0,0">
+                            <Button Content="选择下载位置" DockPanel.Dock="Right" Padding="12,7" Margin="8,0,0,0"
+                                    Click="ChooseInstallRootButton_Click"/>
+                        <TextBox x:Name="InstallRootTextBox" Margin="6" Height="32" Padding="8,5" IsReadOnly="True"
+                                     VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,10,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="安装方式" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <ComboBox x:Name="InstallLoaderComboBox" Margin="6" Width="190" Height="32" SelectedIndex="0"
+                                      SelectionChanged="InstallLoaderComboBox_SelectionChanged">
+                                <ComboBoxItem Content="原版 Minecraft"/>
+                                <ComboBoxItem Content="Fabric（轻量 MOD）"/>
+                                <ComboBoxItem Content="Forge（传统 MOD）"/>
+                            </ComboBox>
+                            <TextBlock x:Name="LoaderChoiceHintText" Text="新手推荐：原版 Minecraft" Foreground="{DynamicResource MutedBrush}"
+                                       Margin="14,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="5" Margin="6,14,6,6">
+                            <ProgressBar x:Name="InstallProgressBar" Height="7" Minimum="0" Maximum="100"
+                                         Visibility="Collapsed" Background="{DynamicResource InputBrush}" Foreground="{DynamicResource AccentLightBrush}"/>
+                            <DockPanel Margin="0,10,0,0">
+                                <Button x:Name="InstallVersionButton" Content="安装所选版本" DockPanel.Dock="Right"
+                                        Padding="18,10" Foreground="{DynamicResource OnAccentTextBrush}" Background="{DynamicResource AccentBrush}"
+                                        BorderThickness="0" Cursor="Hand" Click="InstallVersionButton_Click"/>
+                                <TextBlock x:Name="InstallStatusText" Text="选择版本后即可安装。"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            </DockPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="SettingsPage" Grid.Row="1" Visibility="Collapsed" Margin="0,20,0,20">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="18" Padding="28">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="玩家资料" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="SemiBold"/>
+                            <TextBlock Text="昵称与皮肤入口已放在主页，最近使用的玩家 ID 会保存在本机以便快速切换。"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,18" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="AccountStatusText" Text="当前模式：离线单机" Foreground="{DynamicResource AccentLightBrush}" Margin="0,0,0,16"/>
+                            <TextBlock x:Name="SkinStatusText" Text="点击主页头像管理皮肤。" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,14" TextWrapping="Wrap"/>
+                            <Separator Margin="0,4,0,18"/>
+                            <TextBlock Text="启动器更新" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="CheckLauncherUpdatesButton" Content="检查更新" Padding="14,7" Click="CheckLauncherUpdatesButton_Click"/>
+                                <TextBlock x:Name="LauncherUpdateStatusText" Text="启动时会自动检查 GitHub Releases。" Foreground="{DynamicResource SecondaryTextBrush}"
+                                           Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Separator Margin="0,18,0,18"/>
+                            <TextBlock Text="下载来源" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <ComboBox x:Name="DownloadSourceComboBox" Width="260" Height="32" SelectedIndex="0"
+                                          SelectionChanged="DownloadSourceComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="官方源"/>
+                                    <ComboBoxItem Content="BMCLAPI（中国内地推荐）"/>
+                                    <ComboBoxItem Content="清华 TUNA（官方源回退）"/>
+                                </ComboBox>
+                                <TextBlock x:Name="DownloadSourceHintText" Text="官方源：直接连接 Mojang 与加载器官网。"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Separator Margin="0,18,0,18"/>
+                            <TextBlock Text="游戏性能" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="帧率上限" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox x:Name="GameFpsComboBox" Width="140" Height="32" SelectedIndex="3"
+                                          SelectionChanged="GamePerformanceSetting_Changed">
+                                    <ComboBoxItem Content="60 FPS" Tag="60"/>
+                                    <ComboBoxItem Content="90 FPS" Tag="90"/>
+                                    <ComboBoxItem Content="120 FPS" Tag="120"/>
+                                    <ComboBoxItem Content="144 FPS" Tag="144"/>
+                                    <ComboBoxItem Content="165 FPS" Tag="165"/>
+                                    <ComboBoxItem Content="240 FPS" Tag="240"/>
+                                    <ComboBoxItem Content="不限制" Tag="260"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <CheckBox x:Name="OptimizePerformanceCheckBox" Content="启动时应用轻量性能设置（快速画质、较短视距、关闭垂直同步与实体阴影）"
+                                      Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"
+                                      Checked="GamePerformanceSetting_Changed" Unchecked="GamePerformanceSetting_Changed"/>
+                            <TextBlock Text="设置会在启动游戏时写入该版本的 options.txt，不会覆盖画质、按键或其他设置。"
+                                       Foreground="{DynamicResource MutedDimBrush}" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                            <Separator Margin="0,4,0,18"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Button x:Name="VioletThemeButton" HorizontalAlignment="Left" Padding="8,5" Margin="0"
+                                    Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrushColor}"
+                                    Click="VioletThemeButton_Click" ToolTip="紫罗兰隐藏主题">
+                                    <Grid Width="30" Height="30">
+                                        <Border Width="19" Height="24" CornerRadius="9,9,2,2" Background="#66556D"
+                                                VerticalAlignment="Bottom" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="RIP" Foreground="White" FontSize="7" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                        <TextBlock Text="✿" Foreground="#A855F7" FontSize="17" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                                    </Grid>
+                            </Button>
+                                <TextBlock x:Name="VioletEasterEggText" Text="绫于此长眠" Visibility="Collapsed"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <Separator Margin="0,4,0,18"/>
+                            <TextBlock Text="离线账号说明" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="CIE 使用本地昵称启动，不会进行微软正版登录。只有关闭正版验证的服务器允许离线账号加入；开启正版验证的服务器仍会拒绝。"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="遇到问题？欢迎加入 QQ 群反馈：928579066" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,18"/>
+                            <Button Content="删除 CIE 启动器…" HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,20"
+                                    Click="UninstallLauncherButton_Click"/>
+                            <TextBlock Text="宇宙级安全免责声明" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,0"/>
+                            <TextBlock Text="请把启动器当作一把通往宇宙的钥匙：只从可信来源导入游戏、整合包、MOD 与皮肤；第三方内容可能包含错误、恶意代码或不兼容文件。CIE 不对第三方文件的安全性、可用性、数据损失、存档损坏、设备或网络影响作保证。运行前请自行核验来源并备份重要文件。离线昵称仅用于本地身份标识，不代表正版授权；遵守 Minecraft 使用条款、服务器规则及适用法律。使用本启动器即表示你理解并自行承担相关风险。宇宙很大，备份很重要。"
+                                       Foreground="{DynamicResource SubtleTextBrush}" Margin="0,8,0,22" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+            <Grid x:Name="DiagnosticsPage" Grid.Row="1" Visibility="Collapsed" Margin="0,20,0,20">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="18" Padding="28">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <TextBlock Text="本机故障诊断" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="DiagnosticsStatusText" Grid.Row="1" Text="诊断只在本机读取启动器与游戏日志，不会自动上传。"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,10" TextWrapping="Wrap"/>
+                        <TextBox x:Name="DiagnosticsTextBox" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="NoWrap" FontFamily="Consolas" Padding="10"
+                                 Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                            <Button Content="重新扫描" Padding="12,7" Margin="0,0,8,0" Click="RefreshDiagnosticsButton_Click"/>
+                            <Button Content="复制诊断摘要" Padding="12,7" Margin="0,0,8,0" Click="CopyDiagnosticsButton_Click"/>
+                            <Button Content="打开日志目录" Padding="12,7" Click="OpenDiagnosticsFolderButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="ModsPage" Grid.Row="1" Visibility="Collapsed" Margin="0,20,0,20" AllowDrop="True"
+                  DragOver="ModsPage_DragOver" Drop="ModsPage_Drop">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="18" Padding="28">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <DockPanel>
+                            <Button Content="打开 MOD 文件夹" DockPanel.Dock="Right" Padding="14,8" Click="OpenModsFolderButton_Click"/>
+                            <TextBlock Text="MOD 加载管理器" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <StackPanel Grid.Row="1" Margin="0,12,0,8">
+                            <DockPanel>
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                <ComboBox x:Name="ModsInstanceComboBox" Width="300" Height="32" Margin="8,0,16,0"
+                                          DisplayMemberPath="DisplayName" SelectionChanged="ModsInstanceComboBox_SelectionChanged"/>
+                                <TextBlock Text="MOD 文件来源" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="ModsSourceComboBox" Width="250" Height="32" Margin="8,0,0,0" SelectedIndex="0"
+                                          SelectionChanged="ModsSourceComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="CIE 独立 MOD 与游戏设置"/>
+                                    <ComboBoxItem Content="PCL 原目录（MOD、配置与存档）"/>
+                                </ComboBox>
+                                </StackPanel>
+                                <TextBlock Text="管理版本" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock x:Name="ModsStatusText" Text="按版本隔离管理 MOD；关闭的 MOD 会保留在本机。"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,8" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <TabControl x:Name="ModsTabs" Grid.Row="2">
+                            <TabItem Header="已安装模组">
+                                <Grid Background="{DynamicResource SurfaceBrush}">
+                                    <ListView x:Name="ModsListView" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0">
+                                        <ListView.View><GridView>
+                                            <GridViewColumn Header="模组文件" Width="180" DisplayMemberBinding="{Binding Name}"/>
+                                            <GridViewColumn Header="版本与检查" Width="450" DisplayMemberBinding="{Binding Summary}"/>
+                                            <GridViewColumn Header="更新" Width="85" DisplayMemberBinding="{Binding UpdateStatus}"/>
+                                            <GridViewColumn Header="状态" Width="70" DisplayMemberBinding="{Binding EnabledLabel}"/>
+                                            <GridViewColumn Header="操作" Width="90"><GridViewColumn.CellTemplate><DataTemplate>
+                                                <Button Content="{Binding ToggleLabel}" Tag="{Binding}" Click="ToggleModButton_Click" Padding="8,3"/>
+                                            </DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                                        </GridView></ListView.View>
+                                    </ListView>
+                                    <TextBlock Text="将 .jar 模组拖到此页面即可安装" Foreground="{DynamicResource MutedDimBrush}"
+                                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,8" IsHitTestVisible="False"/>
+                                </Grid>
+                            </TabItem>
+                            <TabItem Header="Modrinth 模组下载">
+                                <Grid Margin="10">
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                                        <Button Content="搜索" DockPanel.Dock="Right" Padding="14,7" Click="ModrinthSearchButton_Click"/>
+                                        <TextBox x:Name="ModrinthSearchTextBox" Height="32" Padding="8,5" VerticalContentAlignment="Center"
+                                                 ToolTip="支持中文关键词和常见模组别名；按 Enter 搜索" KeyDown="ModrinthSearchTextBox_KeyDown"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="ModrinthSearchStatusText" Grid.Row="1" Text="会按当前选择的游戏版本与加载器筛选模组。"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                    <ListView x:Name="ModrinthResultsListView" Grid.Row="2" MinHeight="450" Background="{DynamicResource SurfaceBrush}"
+                                              Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" SelectionChanged="ModrinthResultsListView_SelectionChanged">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="4,6">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="58"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                    <Border Width="48" Height="48" CornerRadius="8" Background="{DynamicResource CardBrush}" VerticalAlignment="Top">
+                                                        <Image Source="{Binding IconUrl}" Width="48" Height="48" Stretch="UniformToFill"/>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                                                        <DockPanel>
+                                                            <TextBlock Text="{Binding Downloads, StringFormat=下载量 {0}}" DockPanel.Dock="Right"
+                                                                       Foreground="{DynamicResource MutedDimBrush}" Margin="8,0,0,0"/>
+                                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Description}" Foreground="{DynamicResource SecondaryTextBrush}"
+                                                                   TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                                        <TextBlock Text="{Binding Author}" Foreground="{DynamicResource MutedDimBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                    <DockPanel Grid.Row="3" Margin="0,8,0,0">
+                                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                            <Button x:Name="ModrinthWikiButton" Content="MC百科" Padding="12,7" Margin="0,0,8,0"
+                                                    IsEnabled="False" Click="ModrinthWikiButton_Click"/>
+                                            <Button x:Name="ModrinthInstallButton" Content="安装所选模组" Padding="14,7"
+                                                    IsEnabled="False" Click="ModrinthInstallButton_Click"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="ModrinthDependencyText" Text="选择模组查看适配版本与必需前置。"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                </Grid>
+                            </TabItem>
+                        </TabControl>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="InstancesPage" Grid.Row="1" Visibility="Collapsed" Margin="0,20,0,20">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="18" Padding="28">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <DockPanel>
+                            <Button Content="导入 PCL2 .minecraft" DockPanel.Dock="Right" Padding="14,8" Click="ImportMinecraftFolderButton_Click"/>
+                            <TextBlock Text="已安装版本" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <TextBlock x:Name="InstancesStatusText" Grid.Row="1" Text="选择一个版本作为启动目标，也可以导入 PCL2 的游戏目录。"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,14" TextWrapping="Wrap"/>
+                        <ListView x:Name="InstancesListView" Grid.Row="2" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0"
+                                  DisplayMemberPath="DisplayName" SelectionChanged="InstancesListView_SelectionChanged"/>
+                        <WrapPanel Grid.Row="3" HorizontalAlignment="Stretch" Margin="0,14,0,0">
+                            <TextBlock Text="分类" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox x:Name="InstanceFolderComboBox" Width="140" Height="32" Margin="0,0,8,8"
+                                      SelectionChanged="InstanceFolderComboBox_SelectionChanged"/>
+                            <Button Content="新建分类" Padding="10,7" Margin="0,0,8,0" Click="CreateInstanceFolderButton_Click"/>
+                            <Button Content="归入分类" Padding="10,7" Margin="0,0,8,0" Click="AssignInstanceFolderButton_Click"/>
+                            <Button Content="重命名" Padding="10,7" Margin="0,0,8,0" Click="RenameInstanceButton_Click"/>
+                            <Button Content="打开游戏目录" Padding="14,8" Margin="0,0,10,0" Click="OpenInstanceFolderButton_Click"/>
+                            <Button Content="卸载所选版本" Padding="14,8" Margin="0,0,10,0" Click="UninstallSelectedInstanceButton_Click"/>
+                            <Button Content="启动所选版本" Padding="18,9" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}" Click="LaunchSelectedInstanceButton_Click"/>
+                        </WrapPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            <!-- 其他页面占位 -->
+            <Grid x:Name="PlaceholderPage"
+                  Grid.Row="1"
+                  Visibility="Collapsed"
+                  Margin="0,20,0,20">
+
+                <Border Background="{DynamicResource CardBrush}"
+                        CornerRadius="18"
+                        Padding="30">
+
+                    <StackPanel VerticalAlignment="Center">
+
+                        <TextBlock x:Name="PlaceholderTitle"
+                                   Text="页面"
+                                   Foreground="{DynamicResource PrimaryTextBrush}"
+                                   FontSize="30"
+                                   FontWeight="Bold"/>
+
+                        <TextBlock x:Name="PlaceholderDescription"
+                                   Text="功能正在开发中..."
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   FontSize="15"
+                                   Margin="0,12,0,0"/>
+
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 底部状态栏 -->
+            <Grid Grid.Row="2">
+
+                <TextBlock Text="CIE Launcher"
+                           Foreground="{DynamicResource MutedDimBrush}"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="Ready"
+                           Foreground="{DynamicResource AccentLightBrush}"
+                           FontSize="12"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+
+            </Grid>
+
+        </Grid>
+    </Grid>
+
+</Window>
+
+
