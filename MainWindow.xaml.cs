@@ -1778,9 +1778,44 @@ public partial class MainWindow : Window
         InstanceFolderComboBox.ItemsSource = choices;
         InstanceFolderComboBox.SelectedItem = choices.Contains(selected) ? selected : "全部版本";
         FilterInstalledInstances();
+        UpdateInstanceFolderIcon();
     }
 
-    private void InstanceFolderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => FilterInstalledInstances();
+    private void InstanceFolderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FilterInstalledInstances();
+        UpdateInstanceFolderIcon();
+    }
+
+    private void UpdateInstanceFolderIcon()
+    {
+        if (InstanceFolderIconImage is null) return;
+        var selected = InstanceFolderComboBox?.SelectedItem as string;
+        if (string.IsNullOrEmpty(selected) || selected == "全部版本")
+        {
+            InstanceFolderIconImage.Source = CategoryManagerWindow.DefaultFolderIcon();
+            return;
+        }
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(selected))).ToLowerInvariant();
+        var iconPath = Path.Combine(InstanceFolderIconsDirectory, hash + ".png");
+        if (!File.Exists(iconPath))
+        {
+            InstanceFolderIconImage.Source = CategoryManagerWindow.DefaultFolderIcon();
+            return;
+        }
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 48;
+            image.UriSource = new Uri(iconPath);
+            image.EndInit();
+            image.Freeze();
+            InstanceFolderIconImage.Source = image;
+        }
+        catch { InstanceFolderIconImage.Source = CategoryManagerWindow.DefaultFolderIcon(); }
+    }
 
     private void FilterInstalledInstances()
     {
