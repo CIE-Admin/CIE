@@ -645,7 +645,7 @@
                                   DisplayMemberPath="DisplayName" SelectionChanged="InstancesListView_SelectionChanged"/>
                         <WrapPanel Grid.Row="3" HorizontalAlignment="Stretch" Margin="0,14,0,0">
                             <TextBlock Text="分类" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="📁" FontSize="20" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <Image x:Name="InstanceFolderIconImage" Width="24" Height="24" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <ComboBox x:Name="InstanceFolderComboBox" Width="150" Height="34" Margin="0,0,8,8"
                                       SelectionChanged="InstanceFolderComboBox_SelectionChanged"/>
                             <Button x:Name="ManageInstanceFoldersButton" Content="▤  分类管理" Padding="12,7" Margin="0,0,8,0"
