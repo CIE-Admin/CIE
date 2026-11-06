@@ -8,7 +8,7 @@ using System.IO.Compression;
 using Microsoft.Win32;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+using Ellipse = System.Windows.Shapes.Ellipse;
 using System.Windows.Media.Imaging;
 using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
