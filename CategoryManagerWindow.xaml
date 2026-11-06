@@ -3,6 +3,29 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="分类管理" Width="760" Height="560" MinWidth="640" MinHeight="460"
         WindowStartupLocation="CenterOwner" Background="#F3F5F8">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#F0F1F5"/>
+            <Setter Property="Foreground" Value="#343945"/>
+            <Setter Property="BorderBrush" Value="#DEE1E8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#E8D9F3"/><Setter Property="Foreground" Value="#57306D"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Background" Value="#D9C2E9"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid Margin="22">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,16">
