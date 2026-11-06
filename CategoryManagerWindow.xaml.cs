@@ -43,7 +43,7 @@ public partial class CategoryManagerWindow : Window
 
     private void RefreshFolderList(string? selectName = null)
     {
-        var entries = _folders.Select(name => new FolderEntry(name, LoadIcon(name))).ToList();
+        var entries = _folders.Select(name => new FolderEntry(name, LoadIcon(name) ?? DefaultFolderIcon())).ToList();
         FolderListBox.ItemsSource = entries;
         if (selectName is not null)
             FolderListBox.SelectedItem = entries.FirstOrDefault(item => item.Name == selectName);
