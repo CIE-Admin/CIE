@@ -489,6 +489,11 @@ public partial class MainWindow : Window
         PlaceholderPage.Visibility = Visibility.Collapsed;
     }
 
+    private void SafetyDeclarationButton_Click(object sender, RoutedEventArgs e)
+    {
+        new SafetyDeclarationWindow { Owner = this }.ShowDialog();
+    }
+
     private void UninstallLauncherButton_Click(object sender, RoutedEventArgs e)
     {
         var installPath = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
