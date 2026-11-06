@@ -49,6 +49,12 @@ jobs:
           & $installerScript -Channel 10.0 -Runtime windowsdesktop -Architecture x64 -InstallDir $runtimeStage
           if ($LASTEXITCODE -ne 0) { throw "Desktop runtime installation failed: $LASTEXITCODE" }
 
+          # dotnet-install prepends its runtime-only directory to PATH; restore the SDK host first.
+          $sdkRoot = $env:DOTNET_ROOT
+          if (-not $sdkRoot) { $sdkRoot = 'C:\Program Files\dotnet' }
+          $env:DOTNET_ROOT = $sdkRoot
+          $env:PATH = "$sdkRoot;$env:PATH"
+
           $updateFiles = @('CIE.exe', 'CIE.dll', 'CIE.deps.json', 'CIE.runtimeconfig.json')
           $updateStage = Join-Path $dist 'CIE-Update-Package'
           New-Item -ItemType Directory -Path $updateStage -Force | Out-Null
