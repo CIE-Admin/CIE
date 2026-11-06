@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Globalization;
+using System.Text.Json.Serialization;
+using System.Windows.Media.Imaging;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +32,8 @@ public sealed class InstanceProfile
     public string CustomName { get; set; } = "";
     public string VirtualFolder { get; set; } = "";
     public DateTime LastPlayed { get; set; }
+    [JsonIgnore]
+    public BitmapSource? IconSource { get; set; }
     public string DisplayName
     {
         get
