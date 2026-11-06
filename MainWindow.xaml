@@ -675,7 +675,7 @@
                             <Button Content="导入 PCL2 .minecraft" DockPanel.Dock="Right" Padding="14,8" Click="ImportMinecraftFolderButton_Click"/>
                             <TextBlock Text="已安装版本" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="SemiBold"/>
                         </DockPanel>
-                        <TextBlock x:Name="InstancesStatusText" Grid.Row="1" Text="选择一个版本作为启动目标，也可以导入 PCL2 的游戏目录。"
+                        <TextBlock x:Name="InstancesStatusText" Grid.Row="1" Text="可用 Ctrl 或 Shift 多选版本后批量归类；选择一个版本可启动、重命名或设置图标，也可以导入 PCL2 游戏目录。"
                                    Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,14" TextWrapping="Wrap"/>
                         <ListView x:Name="InstancesListView" Grid.Row="2" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0"
                                   SelectionMode="Extended" SelectionChanged="InstancesListView_SelectionChanged">
@@ -687,7 +687,7 @@
                             <Image x:Name="InstanceFolderIconImage" Width="24" Height="24" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <ComboBox x:Name="InstanceFolderComboBox" Width="150" Height="34" Margin="0,0,8,8"
                                       SelectionChanged="InstanceFolderComboBox_SelectionChanged"/>
-                            <Button x:Name="ManageInstanceFoldersButton" Content="▤  分类管理" Padding="12,7" Margin="0,0,8,0"
+                            <Button x:Name="ManageInstanceFoldersButton" Content="▤  分类与批量归类" Padding="12,7" Margin="0,0,8,0"
                                     Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentTextBrush}"
                                     Click="ManageInstanceFoldersButton_Click"/>
                             <Button Content="重命名" Padding="10,7" Margin="0,0,8,0" Click="RenameInstanceButton_Click"/>
