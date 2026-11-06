@@ -50,8 +50,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Desktop runtime installation failed: $LASTEXITCODE" }
 
           # dotnet-install prepends its runtime-only directory to PATH; restore the SDK host first.
-          $sdkRoot = $env:DOTNET_ROOT
-          if (-not $sdkRoot) { $sdkRoot = 'C:\Program Files\dotnet' }
+          $sdkRoot = 'C:\Program Files\dotnet'
           $env:DOTNET_ROOT = $sdkRoot
           $env:PATH = "$sdkRoot;$env:PATH"
 
