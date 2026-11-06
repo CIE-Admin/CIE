@@ -76,8 +76,8 @@
                             </StackPanel>
                         </StackPanel>
                         <Separator Margin="0,4,0,14"/>
-                        <TextBlock Text="当前版本归类" FontSize="17" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="AssignHintText" Text="选择已安装版本后，可在这里将其归入文件夹。" Margin="0,5,0,9" Foreground="#667080" TextWrapping="Wrap"/>
+                        <TextBlock Text="版本归类" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="AssignHintText" Text="可在已安装版本列表中按 Ctrl 或 Shift 多选，再统一归入一个文件夹。" Margin="0,5,0,9" Foreground="#667080" TextWrapping="Wrap"/>
                         <ComboBox x:Name="AssignFolderComboBox" Height="34" SelectionChanged="AssignFolderComboBox_SelectionChanged"/>
                     </StackPanel>
                 </ScrollViewer>
