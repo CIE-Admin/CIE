@@ -262,7 +262,7 @@ public sealed class GameLaunchService
             ["${auth_player_name}"] = name, ["${version_name}"] = id, ["${game_directory}"] = GetLaunchDirectory(profile),
             ["${assets_root}"] = Path.Combine(profile.BaseDirectory, "assets"), ["${assets_index_name}"] = ReadText(chain, "assets", "legacy"),
             ["${auth_uuid}"] = uuid, ["${auth_access_token}"] = "0", ["${clientid}"] = "0", ["${auth_xuid}"] = "0",
-            ["${user_type}"] = "legacy", ["${version_type}"] = "release", ["${classpath}"] = classpath,
+            ["${user_type}"] = "legacy", ["${version_type}"] = "release", ["${user_properties}"] = "{}", ["${classpath}"] = classpath,
             ["${library_directory}"] = Path.Combine(profile.BaseDirectory, "libraries"), ["${natives_directory}"] = natives,
             ["${launcher_name}"] = "CIE", ["${launcher_version}"] = "0.1.0", ["${resolution_width}"] = "1280",
             ["${resolution_height}"] = "720", ["${primary_jar}"] = clientJar
@@ -277,7 +277,11 @@ public sealed class GameLaunchService
         AddJvmArg(jvm, "-Dminecraft.launcher.version=", "-Dminecraft.launcher.version=0.1.0");
         if (!jvm.Any(a => a.StartsWith("-Xmx", StringComparison.OrdinalIgnoreCase))) jvm.Insert(0, "-Xmx2G");
         var mainClass = ReadText(chain, "mainClass", "net.minecraft.client.main.Main");
-        var start = new ProcessStartInfo(java) { WorkingDirectory = GetLaunchDirectory(profile), UseShellExecute = false };
+        var launchJava = Path.GetFileName(java).Equals("java.exe", StringComparison.OrdinalIgnoreCase)
+            ? Path.Combine(Path.GetDirectoryName(java)!, "javaw.exe")
+            : java;
+        if (!File.Exists(launchJava)) launchJava = java;
+        var start = new ProcessStartInfo(launchJava) { WorkingDirectory = GetLaunchDirectory(profile), UseShellExecute = false };
         foreach (var arg in jvm.Concat([mainClass]).Concat(game)) start.ArgumentList.Add(arg);
         _ = Process.Start(start) ?? throw new InvalidOperationException("无法启动 Minecraft 进程。");
         }
