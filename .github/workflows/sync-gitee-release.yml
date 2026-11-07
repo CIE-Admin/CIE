@@ -1,0 +1,40 @@
+name: Sync an existing release to Gitee
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: GitHub release tag to mirror, for example v1.0.12
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download GitHub release files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:GITEE_USERNAME) -or [string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) {
+            throw 'Add GITEE_USERNAME and GITEE_TOKEN in repository Settings > Secrets and variables > Actions before running this workflow.'
+          }
+          $directory = Join-Path $env:GITHUB_WORKSPACE 'dist'
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          gh release download "$env:RELEASE_TAG" --repo CIE-Admin/CIE --dir $directory
+          if ($LASTEXITCODE -ne 0) { throw "Could not download GitHub release $env:RELEASE_TAG." }
+          $notes = gh release view "$env:RELEASE_TAG" --repo CIE-Admin/CIE --json body --jq .body
+          if ($LASTEXITCODE -ne 0) { throw "Could not read release notes for $env:RELEASE_TAG." }
+          & .\packaging\Sync-GiteeRelease.ps1 -Tag $env:RELEASE_TAG -AssetDirectory $directory -ReleaseNotes $notes
+          if ($LASTEXITCODE -ne 0) { throw "Gitee mirror failed for $env:RELEASE_TAG." }
