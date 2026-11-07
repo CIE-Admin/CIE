@@ -8,9 +8,8 @@ $ErrorActionPreference = 'Stop'
 $owner = 'cieadmin'
 $repository = 'CIE'
 $token = $env:GITEE_TOKEN
-$username = $env:GITEE_USERNAME
-if ([string]::IsNullOrWhiteSpace($token) -or [string]::IsNullOrWhiteSpace($username)) {
-    throw 'Gitee credentials are missing. Add GITEE_USERNAME and GITEE_TOKEN as GitHub Actions secrets.'
+if ([string]::IsNullOrWhiteSpace($token)) {
+    throw 'Gitee credentials are missing. Add GITEE_TOKEN as a GitHub Actions secret.'
 }
 
 $assetNames = @('CIE-Installer.exe', 'CIE-Update.zip', 'CIE-Update.zip.sha256')
@@ -25,7 +24,7 @@ $assetPaths = foreach ($name in $assetNames) {
 $tagRef = "refs/tags/$Tag"
 & git fetch origin ("{0}:{1}" -f $tagRef, $tagRef)
 if ($LASTEXITCODE -ne 0) { throw "Could not fetch GitHub release tag $Tag." }
-$credentialText = '{0}:{1}' -f $username, $token
+$credentialText = 'oauth2:{0}' -f $token
 $authorization = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentialText))
 $gitUrl = "https://gitee.com/$owner/$repository.git"
 $env:GIT_TERMINAL_PROMPT = '0'
@@ -46,7 +45,7 @@ $api = "https://gitee.com/api/v5/repos/$owner/$repository"
 $encodedTag = [Uri]::EscapeDataString($Tag)
 $release = $null
 try {
-    $release = Invoke-RestMethod -Method Get -Uri "$api/releases/tags/$encodedTag?access_token=$([Uri]::EscapeDataString($token))"
+    $release = Invoke-RestMethod -Method Get -Uri "$api/releases/tags/$encodedTag?access_token=$([Uri]::EscapeDataString($token))" -TimeoutSec 90
 }
 catch {
     $status = 0
@@ -66,17 +65,19 @@ if ($null -eq $release) {
         target_commitish = 'main'
         prerelease = 'false'
     }
-    $release = Invoke-RestMethod -Method Post -Uri "$api/releases" -ContentType 'application/x-www-form-urlencoded' -Body $createBody
+    Write-Host "Creating Gitee release $Tag..."
+    $release = Invoke-RestMethod -Method Post -Uri "$api/releases" -ContentType 'application/x-www-form-urlencoded' -Body $createBody -TimeoutSec 90
 }
 $releaseId = $release.id
 if (-not $releaseId) { throw "Gitee did not return a release ID for $Tag." }
 
 $attachments = @()
+Write-Host "Checking existing Gitee release attachments..."
 try {
-    $attachments = @(Invoke-RestMethod -Method Get -Uri "$api/releases/$releaseId/attach_files?access_token=$([Uri]::EscapeDataString($token))")
+    $attachments = @(Invoke-RestMethod -Method Get -Uri "$api/releases/$releaseId/attach_files?access_token=$([Uri]::EscapeDataString($token))" -TimeoutSec 90)
 }
 catch {
-    Write-Warning "Could not list existing Gitee release files: $($_.Exception.Message)"
+    throw "Could not list Gitee release attachments: $($_.Exception.Message)"
 }
 
 foreach ($path in $assetPaths) {
@@ -87,7 +88,8 @@ foreach ($path in $assetPaths) {
     }
     $file = Get-Item -LiteralPath $path
     $form = @{ access_token = $token; file = $file }
-    Invoke-RestMethod -Method Post -Uri "$api/releases/$releaseId/attach_files" -Form $form | Out-Null
+    Write-Host "Uploading to Gitee: $name (request timeout: 15 minutes)"
+    Invoke-RestMethod -Method Post -Uri "$api/releases/$releaseId/attach_files" -Form $form -TimeoutSec 900 | Out-Null
     Write-Host "Uploaded to Gitee: $name"
 }
 Write-Host "Gitee release ready: https://gitee.com/$owner/$repository/releases/tag/$Tag"
