@@ -77,7 +77,8 @@ foreach ($path in $assetPaths) {
         Write-Host "Already present on Gitee: $name"
         continue
     }
-    $form = @{ access_token = $token; file = Get-Item -LiteralPath $path }
+    $file = Get-Item -LiteralPath $path
+    $form = @{ access_token = $token; file = $file }
     Invoke-RestMethod -Method Post -Uri "$api/releases/$releaseId/attach_files" -Form $form | Out-Null
     Write-Host "Uploaded to Gitee: $name"
 }
