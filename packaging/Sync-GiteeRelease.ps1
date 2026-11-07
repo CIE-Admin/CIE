@@ -20,18 +20,26 @@ $assetPaths = foreach ($name in $assetNames) {
     $path
 }
 
-# Keep the Gitee source mirror current and publish the same tag users will install.
+# Try to mirror the source tag as well. Some imported Gitee repositories reject Git pushes;
+# release creation and asset uploads use the Gitee API below and should still proceed.
 $tagRef = "refs/tags/$Tag"
 & git fetch origin ("{0}:{1}" -f $tagRef, $tagRef)
 if ($LASTEXITCODE -ne 0) { throw "Could not fetch GitHub release tag $Tag." }
 $credentialText = '{0}:{1}' -f $username, $token
 $authorization = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentialText))
 $gitUrl = "https://gitee.com/$owner/$repository.git"
-& git -c "http.extraheader=AUTHORIZATION: basic $authorization" push $gitUrl ("{0}:{1}" -f $tagRef, $tagRef)
-if ($LASTEXITCODE -ne 0) { throw "Could not push tag $Tag to Gitee." }
-& git -c "http.extraheader=AUTHORIZATION: basic $authorization" push $gitUrl ("{0}:refs/heads/main" -f $tagRef)
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning 'The release tag was mirrored, but the Gitee main branch could not be fast-forwarded. The tagged source and release assets remain available.'
+$env:GIT_TERMINAL_PROMPT = '0'
+$env:GCM_INTERACTIVE = 'Never'
+& git -c 'credential.helper=' -c 'credential.interactive=never' -c "http.extraheader=Authorization: Basic $authorization" push $gitUrl ("{0}:{1}" -f $tagRef, $tagRef)
+$tagPushSucceeded = $LASTEXITCODE -eq 0
+if (-not $tagPushSucceeded) {
+    Write-Warning "Could not push source tag $Tag to Gitee; continuing with release and attachment synchronization through the Gitee API."
+}
+else {
+    & git -c 'credential.helper=' -c 'credential.interactive=never' -c "http.extraheader=Authorization: Basic $authorization" push $gitUrl ("{0}:refs/heads/main" -f $tagRef)
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning 'The release tag was mirrored, but the Gitee main branch could not be fast-forwarded. Release asset synchronization will continue.'
+    }
 }
 
 $api = "https://gitee.com/api/v5/repos/$owner/$repository"
