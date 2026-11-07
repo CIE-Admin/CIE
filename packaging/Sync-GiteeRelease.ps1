@@ -88,6 +88,10 @@ foreach ($path in $assetPaths) {
         Write-Host "Already present on Gitee: $name"
         continue
     }
+    if ($name -eq 'CIE-Installer.exe') {
+        Write-Warning 'Gitee does not complete this large installer upload from the GitHub runner. Upload CIE-Installer.exe manually to this Gitee release; the smaller update package and checksum will sync automatically.'
+        continue
+    }
     $uploadUri = "$api/releases/$releaseId/attach_files"
     Write-Host "Uploading to Gitee: $name (streaming; request timeout: 15 minutes)"
     $response = & curl.exe --http1.1 --fail-with-body --silent --show-error --progress-bar --connect-timeout 30 --max-time 900 -F "access_token=$token" -F "file=@$path" "$uploadUri"
