@@ -51,6 +51,7 @@ public sealed class InstanceProfile
             return string.IsNullOrWhiteSpace(VirtualFolder) ? name : $"[{VirtualFolder}] {name}";
         }
     }
+    public override string ToString() => DisplayName;
 }
 
 public sealed class InstanceCatalog
