@@ -18,6 +18,8 @@ $assetPaths = foreach ($name in $assetNames) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required release asset is missing: $path" }
     $path
 }
+# Upload small files first so the launcher update package is available before the installer.
+$assetPaths = @($assetPaths | Sort-Object { (Get-Item -LiteralPath $_).Length })
 
 # Try to mirror the source tag as well. Some imported Gitee repositories reject Git pushes;
 # release creation and asset uploads use the Gitee API below and should still proceed.
@@ -86,10 +88,17 @@ foreach ($path in $assetPaths) {
         Write-Host "Already present on Gitee: $name"
         continue
     }
-    $file = Get-Item -LiteralPath $path
-    $form = @{ access_token = $token; file = $file }
-    Write-Host "Uploading to Gitee: $name (request timeout: 15 minutes)"
-    Invoke-RestMethod -Method Post -Uri "$api/releases/$releaseId/attach_files" -Form $form -TimeoutSec 900 | Out-Null
+    $uploadUri = "$api/releases/$releaseId/attach_files"
+    Write-Host "Uploading to Gitee: $name (streaming; request timeout: 15 minutes)"
+    $response = & curl.exe --http1.1 --fail-with-body --silent --show-error --progress-bar --connect-timeout 30 --max-time 900 -F "access_token=$token" -F "file=@$path" "$uploadUri"
+    $curlExitCode = $LASTEXITCODE
+    if ($curlExitCode -ne 0) {
+        throw "Gitee upload failed for $name (curl exit code $curlExitCode): $response"
+    }
+    $uploadResult = $response | ConvertFrom-Json
+    if (-not $uploadResult.id -and -not $uploadResult.name) {
+        throw "Gitee did not confirm the uploaded attachment $name."
+    }
     Write-Host "Uploaded to Gitee: $name"
 }
 Write-Host "Gitee release ready: https://gitee.com/$owner/$repository/releases/tag/$Tag"
