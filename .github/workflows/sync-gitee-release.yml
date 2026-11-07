@@ -36,7 +36,8 @@ jobs:
           New-Item -ItemType Directory -Path $directory -Force | Out-Null
           gh release download "$env:RELEASE_TAG" --repo CIE-Admin/CIE --dir $directory
           if ($LASTEXITCODE -ne 0) { throw "Could not download GitHub release $env:RELEASE_TAG." }
-          $notes = gh release view "$env:RELEASE_TAG" --repo CIE-Admin/CIE --json body --jq .body
+          $notesLines = @(gh release view "$env:RELEASE_TAG" --repo CIE-Admin/CIE --json body --jq .body)
           if ($LASTEXITCODE -ne 0) { throw "Could not read release notes for $env:RELEASE_TAG." }
+          $notes = $notesLines -join [Environment]::NewLine
           & .\packaging\Sync-GiteeRelease.ps1 -Tag $env:RELEASE_TAG -AssetDirectory $directory -ReleaseNotes $notes
           if ($LASTEXITCODE -ne 0) { throw "Gitee mirror failed for $env:RELEASE_TAG." }
