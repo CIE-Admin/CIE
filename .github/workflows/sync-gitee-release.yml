@@ -24,13 +24,12 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if ([string]::IsNullOrWhiteSpace($env:GITEE_USERNAME) -or [string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) {
-            throw 'Add GITEE_USERNAME and GITEE_TOKEN in repository Settings > Secrets and variables > Actions before running this workflow.'
+          if ([string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) {
+            throw 'Add GITEE_TOKEN in repository Settings > Secrets and variables > Actions before running this workflow.'
           }
           $directory = Join-Path $env:GITHUB_WORKSPACE 'dist'
           New-Item -ItemType Directory -Path $directory -Force | Out-Null
