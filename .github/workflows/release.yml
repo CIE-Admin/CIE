@@ -92,7 +92,8 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:GITEE_USERNAME) -or [string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) {
             throw 'Add GITEE_USERNAME and GITEE_TOKEN in repository Settings > Secrets and variables > Actions before publishing.'
           }
-          $notes = gh release view "$env:GITHUB_REF_NAME" --repo CIE-Admin/CIE --json body --jq .body
+          $notesLines = @(gh release view "$env:GITHUB_REF_NAME" --repo CIE-Admin/CIE --json body --jq .body)
           if ($LASTEXITCODE -ne 0) { throw 'Could not read GitHub Release notes for Gitee mirror.' }
+          $notes = $notesLines -join [Environment]::NewLine
           & .\packaging\Sync-GiteeRelease.ps1 -Tag $env:GITHUB_REF_NAME -AssetDirectory 'dist' -ReleaseNotes $notes
           if ($LASTEXITCODE -ne 0) { throw 'Gitee release mirror failed.' }
