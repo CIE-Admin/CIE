@@ -42,16 +42,16 @@ else {
 }
 
 $api = "https://gitee.com/api/v5/repos/$owner/$repository"
-$encodedTag = [Uri]::EscapeDataString($Tag)
+$encodedToken = [Uri]::EscapeDataString($token)
 $release = $null
-try {
-    $release = Invoke-RestMethod -Method Get -Uri "$api/releases/tags/$encodedTag?access_token=$([Uri]::EscapeDataString($token))" -TimeoutSec 90
-}
-catch {
-    $status = 0
-    try { $status = [int]$_.Exception.Response.StatusCode } catch { }
-    if ($status -ne 404) { throw }
-}
+$page = 1
+do {
+    Write-Host "Looking for Gitee release $Tag (page $page)..."
+    $releasePage = @(Invoke-RestMethod -Method Get -Uri "$api/releases?access_token=$encodedToken&page=$page&per_page=100" -TimeoutSec 90)
+    $release = $releasePage | Where-Object { $_.tag_name -eq $Tag } | Select-Object -First 1
+    if ($null -ne $release -or $releasePage.Count -lt 100) { break }
+    $page++
+} while ($true)
 
 if ($null -eq $release) {
     if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
