@@ -79,11 +79,11 @@ internal static class LauncherUpdateService
             if (string.IsNullOrWhiteSpace(tag) || !TryGetVersion(tag, out var version)) continue;
             var body = GetString(release, "body") ?? "";
             var published = GetString(release, "published_at") ?? GetString(release, "created_at") ?? "";
-            var url = GetString(release, "html_url") ?? "";
+            var releaseUrl = GetString(release, "html_url") ?? "";
             var publishedLabel = DateTimeOffset.TryParse(published, out var date)
                 ? date.ToLocalTime().ToString("yyyy-MM-dd")
                 : published;
-            notes.Add(new LauncherReleaseNote(version.ToString(), body.Trim(), publishedLabel, url, Normalize(version), source));
+            notes.Add(new LauncherReleaseNote(version.ToString(), body.Trim(), publishedLabel, releaseUrl, Normalize(version), source));
         }
 
         return notes
