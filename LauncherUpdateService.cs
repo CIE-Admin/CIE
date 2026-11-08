@@ -34,16 +34,20 @@ internal static class LauncherUpdateService
         Exception? giteeError = null;
         try
         {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(8));
             var gitee = await ReadReleaseHistoryAsync(GiteeClient,
-                $"https://gitee.com/api/v5/repos/{GiteeOwner}/{GiteeRepository}/releases?per_page=100", "Gitee", cancellationToken);
+                $"https://gitee.com/api/v5/repos/{GiteeOwner}/{GiteeRepository}/releases?per_page=100", "Gitee", timeout.Token);
             if (gitee.Count > 0) return gitee;
         }
         catch (Exception ex) { giteeError = ex; }
 
         try
         {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(8));
             var github = await ReadReleaseHistoryAsync(GitHubClient,
-                $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepository}/releases?per_page=100", "GitHub", cancellationToken);
+                $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepository}/releases?per_page=100", "GitHub", timeout.Token);
             if (github.Count > 0) return github;
         }
         catch (Exception ex)
