@@ -1249,8 +1249,7 @@ public partial class MainWindow : Window
 
     private async void ModsTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || !ReferenceEquals(e.OriginalSource, ModsTabs) || ModsTabs.SelectedIndex != 1
-            || ModrinthResultsListView.Items.Count > 0)
+        if (!IsLoaded || ModsTabs.SelectedIndex != 1 || ModrinthResultsListView.Items.Count > 0)
             return;
         await LoadRecommendedModsAsync();
     }
@@ -1444,7 +1443,7 @@ public partial class MainWindow : Window
         var expected = NormalizeModName(englishTitle);
         var title = NormalizeModName(hit.Title);
         var slug = NormalizeModName(hit.Slug);
-        if (expected.Length < 3) return 0;
+        if (expected.Length < 3 || (title.Length == 0 && slug.Length == 0)) return 0;
         if (title == expected || slug == expected) return 100;
         if (title.Contains(expected, StringComparison.Ordinal) || expected.Contains(title, StringComparison.Ordinal)) return 80;
         if (slug.Contains(expected, StringComparison.Ordinal) || expected.Contains(slug, StringComparison.Ordinal)) return 70;
