@@ -1520,18 +1520,22 @@ public partial class MainWindow : Window
         using var response = await ModrinthClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         using var json = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-        return json.RootElement.GetProperty("hits").EnumerateArray().Select(hit => new ModrinthProjectHit
+        return json.RootElement.GetProperty("hits").EnumerateArray().Select(hit =>
         {
-            ProjectId = hit.GetProperty("project_id").GetString() ?? "",
-            Slug = hit.TryGetProperty("slug", out var slug) ? slug.GetString() ?? "" : "",
-            Title = hit.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "",
-            EnglishTitle = hit.TryGetProperty("title", out title) ? title.GetString() ?? "" : "",
-            Description = hit.TryGetProperty("description", out var description) ? description.GetString() ?? "" : "",
-            Author = hit.TryGetProperty("author", out var author) ? author.GetString() ?? "" : "",
-            Downloads = hit.TryGetProperty("downloads", out var downloads) ? downloads.GetInt64().ToString("N0") : "—",
-            IconUrl = hit.TryGetProperty("icon_url", out var icon) && icon.ValueKind == System.Text.Json.JsonValueKind.String
-                ? icon.GetString()
-                : null
+            var titleText = hit.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "";
+            return new ModrinthProjectHit
+            {
+                ProjectId = hit.GetProperty("project_id").GetString() ?? "",
+                Slug = hit.TryGetProperty("slug", out var slug) ? slug.GetString() ?? "" : "",
+                Title = titleText,
+                EnglishTitle = titleText,
+                Description = hit.TryGetProperty("description", out var description) ? description.GetString() ?? "" : "",
+                Author = hit.TryGetProperty("author", out var author) ? author.GetString() ?? "" : "",
+                Downloads = hit.TryGetProperty("downloads", out var downloads) ? downloads.GetInt64().ToString("N0") : "—",
+                IconUrl = hit.TryGetProperty("icon_url", out var icon) && icon.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? icon.GetString()
+                    : null
+            };
         }).Where(hit => !string.IsNullOrWhiteSpace(hit.ProjectId)).ToList();
     }
 
