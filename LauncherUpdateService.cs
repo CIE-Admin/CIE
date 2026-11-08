@@ -8,6 +8,7 @@ using System.Text.Json;
 namespace CIE;
 
 internal sealed record LauncherUpdate(string Version, string PackageUrl, string ChecksumUrl, Version ParsedVersion, string ReleaseNotes, string Source);
+public sealed record LauncherReleaseNote(string Version, string Notes, string PublishedLabel, string Url, Version ParsedVersion, string Source);
 
 internal static class LauncherUpdateService
 {
@@ -27,6 +28,66 @@ internal static class LauncherUpdateService
     }
 
     public static Version CurrentVersion => Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0, 0);
+
+    public static async Task<List<LauncherReleaseNote>> GetReleaseHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        Exception? giteeError = null;
+        try
+        {
+            var gitee = await ReadReleaseHistoryAsync(GiteeClient,
+                $"https://gitee.com/api/v5/repos/{GiteeOwner}/{GiteeRepository}/releases?per_page=100", "Gitee", cancellationToken);
+            if (gitee.Count > 0) return gitee;
+        }
+        catch (Exception ex) { giteeError = ex; }
+
+        try
+        {
+            var github = await ReadReleaseHistoryAsync(GitHubClient,
+                $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepository}/releases?per_page=100", "GitHub", cancellationToken);
+            if (github.Count > 0) return github;
+        }
+        catch (Exception ex)
+        {
+            if (giteeError is not null)
+                throw new AggregateException("无法读取 CIE 历史更新日志（Gitee 与 GitHub 均失败）。", giteeError, ex);
+            throw;
+        }
+
+        if (giteeError is not null) throw new InvalidDataException("更新源没有返回可用的历史发行版。", giteeError);
+        return [];
+    }
+
+    private static async Task<List<LauncherReleaseNote>> ReadReleaseHistoryAsync(
+        HttpClient client, string url, string source, CancellationToken cancellationToken)
+    {
+        using var response = await client.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        using var json = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        if (json.RootElement.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException($"{source} 历史发行版格式无效。");
+
+        var notes = new List<LauncherReleaseNote>();
+        foreach (var release in json.RootElement.EnumerateArray())
+        {
+            if (IsDraftOrPrerelease(release)) continue;
+            var tag = GetString(release, "tag_name");
+            if (string.IsNullOrWhiteSpace(tag) || !TryGetVersion(tag, out var version)) continue;
+            var body = GetString(release, "body") ?? "";
+            var published = GetString(release, "published_at") ?? GetString(release, "created_at") ?? "";
+            var url = GetString(release, "html_url") ?? "";
+            var publishedLabel = DateTimeOffset.TryParse(published, out var date)
+                ? date.ToLocalTime().ToString("yyyy-MM-dd")
+                : published;
+            notes.Add(new LauncherReleaseNote(version.ToString(), body.Trim(), publishedLabel, url, Normalize(version), source));
+        }
+
+        return notes
+            .GroupBy(note => Normalize(note.ParsedVersion))
+            .Select(group => group.First())
+            .OrderByDescending(note => note.ParsedVersion)
+            .ToList();
+    }
 
     public static async Task<LauncherUpdate?> CheckAsync(CancellationToken cancellationToken = default)
     {
