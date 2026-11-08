@@ -478,7 +478,7 @@
                                 <Button x:Name="CheckLauncherUpdatesButton" Content="检查更新" Padding="14,7" Click="CheckLauncherUpdatesButton_Click"/>
                                 <Button x:Name="ReleaseHistoryButton" Content="历史更新日志" Padding="14,7" Margin="8,0,0,0"
                                         Click="ReleaseHistoryButton_Click"/>
-                                <TextBlock x:Name="LauncherUpdateStatusText" Text="启动时会自动检查 GitHub Releases。" Foreground="{DynamicResource SecondaryTextBrush}"
+                                <TextBlock x:Name="LauncherUpdateStatusText" Text="启动时会自动检查 GitHub / Gitee 更新。" Foreground="{DynamicResource SecondaryTextBrush}"
                                            Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Separator Margin="0,18,0,18"/>
@@ -631,7 +631,7 @@
                                     </DockPanel>
                                     <TextBlock x:Name="ModrinthSearchStatusText" Grid.Row="1" Text="空搜索时按下载量展示兼容模组推荐；输入中文优先查 MC 百科。"
                                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                                    <ListView x:Name="ModrinthResultsListView" Grid.Row="2" MinHeight="450" Background="{DynamicResource SurfaceBrush}"
+                                    <ListView x:Name="ModrinthResultsListView" Grid.Row="2" MinHeight="450" ScrollViewer.VerticalScrollBarVisibility="Auto" Background="{DynamicResource SurfaceBrush}"
                                               Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" SelectionChanged="ModrinthResultsListView_SelectionChanged">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
