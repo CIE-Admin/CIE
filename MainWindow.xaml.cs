@@ -171,7 +171,7 @@ public partial class MainWindow : Window
         foreach (var (key, color) in colors)
             Resources[key] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
 
-        Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme ? "#C8E6F6" : _isVioletTheme ? "#633184" : "#287FAE"));
+        Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme || _isVioletTheme ? "#111111" : "#287FAE"));
         VioletEasterEggText.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         VioletThemeScene.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         ManageInstanceFoldersButton.Content = _isVioletTheme ? "✿  分类管理" : "▤  分类管理";
