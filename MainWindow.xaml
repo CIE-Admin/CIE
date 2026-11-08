@@ -476,6 +476,8 @@
                             <TextBlock Text="启动器更新" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold"/>
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <Button x:Name="CheckLauncherUpdatesButton" Content="检查更新" Padding="14,7" Click="CheckLauncherUpdatesButton_Click"/>
+                                <Button x:Name="ReleaseHistoryButton" Content="历史更新日志" Padding="14,7" Margin="8,0,0,0"
+                                        Click="ReleaseHistoryButton_Click"/>
                                 <TextBlock x:Name="LauncherUpdateStatusText" Text="启动时会自动检查 GitHub Releases。" Foreground="{DynamicResource SecondaryTextBrush}"
                                            Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -600,7 +602,7 @@
                             <TextBlock x:Name="ModsStatusText" Text="按版本隔离管理 MOD；关闭的 MOD 会保留在本机。"
                                        Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,8" TextWrapping="Wrap"/>
                         </StackPanel>
-                        <TabControl x:Name="ModsTabs" Grid.Row="2">
+                        <TabControl x:Name="ModsTabs" Grid.Row="2" SelectionChanged="ModsTabs_SelectionChanged">
                             <TabItem Header="已安装模组">
                                 <Grid Background="{DynamicResource SurfaceBrush}">
                                     <ListView x:Name="ModsListView" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0">
@@ -619,15 +621,15 @@
                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,8" IsHitTestVisible="False"/>
                                 </Grid>
                             </TabItem>
-                            <TabItem Header="Modrinth 模组下载">
+                            <TabItem Header="模组搜索与推荐">
                                 <Grid Margin="10">
                                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                     <DockPanel Grid.Row="0" Margin="0,0,0,8">
                                         <Button Content="搜索" DockPanel.Dock="Right" Padding="14,7" Click="ModrinthSearchButton_Click"/>
                                         <TextBox x:Name="ModrinthSearchTextBox" Height="32" Padding="8,5" VerticalContentAlignment="Center"
-                                                 ToolTip="支持中文关键词和常见模组别名；按 Enter 搜索" KeyDown="ModrinthSearchTextBox_KeyDown"/>
+                                                 ToolTip="输入中文优先查找 MC 百科；清空搜索框并点击搜索可查看热门推荐" KeyDown="ModrinthSearchTextBox_KeyDown"/>
                                     </DockPanel>
-                                    <TextBlock x:Name="ModrinthSearchStatusText" Grid.Row="1" Text="会按当前选择的游戏版本与加载器筛选模组。"
+                                    <TextBlock x:Name="ModrinthSearchStatusText" Grid.Row="1" Text="空搜索时按下载量展示兼容模组推荐；输入中文优先查 MC 百科。"
                                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                                     <ListView x:Name="ModrinthResultsListView" Grid.Row="2" MinHeight="450" Background="{DynamicResource SurfaceBrush}"
                                               Foreground="{DynamicResource PrimaryTextBrush}" BorderThickness="0" SelectionChanged="ModrinthResultsListView_SelectionChanged">
@@ -654,7 +656,7 @@
                                     </ListView>
                                     <DockPanel Grid.Row="3" Margin="0,8,0,0">
                                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                                            <Button x:Name="ModrinthWikiButton" Content="MC百科" Padding="12,7" Margin="0,0,8,0"
+                                            <Button x:Name="ModrinthWikiButton" Content="查看下载方式" Padding="12,7" Margin="0,0,8,0"
                                                     IsEnabled="False" Click="ModrinthWikiButton_Click"/>
                                             <Button x:Name="ModrinthInstallButton" Content="安装所选模组" Padding="14,7"
                                                     IsEnabled="False" Click="ModrinthInstallButton_Click"/>
