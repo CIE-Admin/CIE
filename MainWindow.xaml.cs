@@ -1726,12 +1726,6 @@ public partial class MainWindow : Window
         finally { if (File.Exists(temp)) File.Delete(temp); }
     }
 
-    private void ModrinthWikiButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ModrinthResultsListView.SelectedItem is not ModrinthProjectHit { WikiUrl: { Length: > 0 } url }) return;
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-    }
-
     private async Task<McmodSearchHit?> FindMcmodEntryAsync(ModrinthProjectHit hit)
     {
         var queries = new[] { hit.EnglishTitle, hit.Slug, hit.Title }
