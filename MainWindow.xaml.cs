@@ -171,7 +171,7 @@ public partial class MainWindow : Window
         foreach (var (key, color) in colors)
             Resources[key] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
 
-        Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme || _isVioletTheme ? "#111111" : "#287FAE"));
+        Resources["ThemeToggleHoverBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_isBlueTheme ? "#C8E6F6" : _isVioletTheme ? "#633184" : "#287FAE"));
         VioletEasterEggText.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         VioletThemeScene.Visibility = _isVioletTheme ? Visibility.Visible : Visibility.Collapsed;
         ManageInstanceFoldersButton.Content = _isVioletTheme ? "✿  分类管理" : "▤  分类管理";
@@ -795,7 +795,24 @@ public partial class MainWindow : Window
     {
         var diagnostic = BuildDiagnosticReport(profile, error);
         var errorLog = DiagnosticLogger.WriteError("启动或安装问题", diagnostic);
-        if (!string.IsNullOrWhiteSpace(errorLog)) diagnostic += Environment.NewLine + Environment.NewLine + "错误记录：" + errorLog;
+        if (!string.IsNullOrWhiteSpace(errorLog))
+            diagnostic += Environment.NewLine + Environment.NewLine + "错误记录：" + errorLog;
+
+        var reportPath = "";
+        try
+        {
+            var downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            Directory.CreateDirectory(downloads);
+            reportPath = Path.Combine(downloads, $"CIE-诊断-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.txt");
+            File.WriteAllText(reportPath, diagnostic);
+            diagnostic += Environment.NewLine + Environment.NewLine + "诊断 TXT 已自动保存：" + reportPath;
+        }
+        catch (Exception ex)
+        {
+            if (!string.IsNullOrWhiteSpace(errorLog))
+                diagnostic += Environment.NewLine + Environment.NewLine + $"自动保存到下载文件夹失败：{ex.Message}{Environment.NewLine}完整记录仍保存在：{errorLog}";
+        }
+
         var window = new Window { Title = "CIE 故障诊断", Owner = this, Width = 840, Height = 620,
             WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#F3F8FC")! };
         var layout = new Grid { Margin = new Thickness(16) };
@@ -810,12 +827,14 @@ public partial class MainWindow : Window
         Grid.SetRow(report, 1); layout.Children.Add(report);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         var copy = new Button { Content = "复制诊断摘要", Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 0) };
-        var open = new Button { Content = "打开日志目录", Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 0) };
+        var open = new Button { Content = "打开诊断 TXT", Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 0), IsEnabled = File.Exists(reportPath) };
+        var openFolder = new Button { Content = "打开日志目录", Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 0) };
         var close = new Button { Content = "关闭", Padding = new Thickness(12, 7, 12, 7), IsCancel = true };
         copy.Click += (_, _) => { Clipboard.SetText(report.Text); copy.Content = "已复制"; };
-        open.Click += (_, _) => OpenDiagnosticsFolderButton_Click(this, new RoutedEventArgs());
+        open.Click += (_, _) => { if (File.Exists(reportPath)) Process.Start(new ProcessStartInfo(reportPath) { UseShellExecute = true }); };
+        openFolder.Click += (_, _) => OpenDiagnosticsFolderButton_Click(this, new RoutedEventArgs());
         close.Click += (_, _) => window.Close();
-        buttons.Children.Add(copy); buttons.Children.Add(open); buttons.Children.Add(close);
+        buttons.Children.Add(copy); buttons.Children.Add(open); buttons.Children.Add(openFolder); buttons.Children.Add(close);
         Grid.SetRow(buttons, 2); layout.Children.Add(buttons); window.Content = layout;
         window.ShowDialog();
     }
@@ -2881,11 +2900,50 @@ internal sealed class MinecraftInstaller
         try
         {
             if (File.Exists(task.Path) && await VerifySha1Async(task.Path, task.Sha1)) return;
-            using var response = await DownloadSource.GetSuccessfulResponseAsync(Client, task.Url, HttpCompletionOption.ResponseHeadersRead);
-            await using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
-                await response.Content.CopyToAsync(output);
-            if (!await VerifySha1Async(temp, task.Sha1)) throw new InvalidDataException($"SHA-1 校验失败：{Path.GetFileName(task.Path)}");
-            File.Move(temp, task.Path, true);
+
+            var bmclUrl = DownloadSource.RewriteForBmclApi(task.Url);
+            var candidates = (DownloadSource.Mode == "bmclapi"
+                    ? new[] { bmclUrl, task.Url }
+                    : new[] { task.Url, bmclUrl })
+                .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var failures = new List<string>();
+
+            foreach (var candidate in candidates)
+            {
+                for (var attempt = 1; attempt <= 2; attempt++)
+                {
+                    try
+                    {
+                        if (File.Exists(temp)) File.Delete(temp);
+                        using var response = await Client.GetAsync(candidate, HttpCompletionOption.ResponseHeadersRead);
+                        response.EnsureSuccessStatusCode();
+                        var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? candidate;
+                        await using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+                            await response.Content.CopyToAsync(output);
+
+                        if (!string.IsNullOrWhiteSpace(task.Sha1))
+                        {
+                            await using var check = File.OpenRead(temp);
+                            var actualHash = Convert.ToHexString(await System.Security.Cryptography.SHA1.HashDataAsync(check));
+                            if (!actualHash.Equals(task.Sha1, StringComparison.OrdinalIgnoreCase))
+                                throw new InvalidDataException($"SHA-1 校验不匹配（期望 {task.Sha1}，实际 {actualHash}；地址 {finalUrl}）。");
+                        }
+
+                        File.Move(temp, task.Path, true);
+                        return;
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or IOException)
+                    {
+                        failures.Add($"来源 {candidate}（第 {attempt} 次）：{ex.Message}");
+                        try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
+                    }
+                }
+            }
+
+            throw new InvalidDataException(
+                $"文件下载失败或校验不一致：{task.Path}。期望 SHA-1：{task.Sha1 ?? "未提供"}。已尝试所选来源与备用来源并各重试一次。{Environment.NewLine}{string.Join(Environment.NewLine, failures)}");
         }
         finally
         {
