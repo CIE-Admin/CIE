@@ -314,12 +314,58 @@ public partial class MainWindow : Window
         LoadGamePerformanceSettings();
         LoadInstances();
         await RefreshVersionsAsync();
+        await ShowCurrentVersionAnnouncementAsync();
         _ = CheckLauncherUpdatesAsync(true, false);
     }
 
     private async void CheckLauncherUpdatesButton_Click(object sender, RoutedEventArgs e)
     {
         await CheckLauncherUpdatesAsync(true, true);
+    }
+
+    private async void ReleaseHistoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            LauncherUpdateStatusText.Text = "正在读取历史更新日志…";
+            var history = await LauncherUpdateService.GetReleaseHistoryAsync();
+            if (history.Count == 0)
+            {
+                LauncherUpdateStatusText.Text = "暂时没有可显示的历史更新日志。";
+                return;
+            }
+            new ReleaseNotesWindow(history, false, _isBlueTheme, _isVioletTheme) { Owner = this }.ShowDialog();
+            LauncherUpdateStatusText.Text = $"已加载 {history.Count} 个版本的更新日志。";
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.WriteError("读取历史更新日志失败", ex.ToString());
+            LauncherUpdateStatusText.Text = "历史更新日志暂时无法读取，请检查网络后重试。";
+            MessageBox.Show(this, $"读取更新日志失败：{ex.Message}", "历史更新日志", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private async Task ShowCurrentVersionAnnouncementAsync()
+    {
+        var currentVersion = LauncherUpdateService.CurrentVersion.ToString(3);
+        var announcedPath = Path.Combine(ProfileDirectory, "announced-release-version.txt");
+        try
+        {
+            Directory.CreateDirectory(ProfileDirectory);
+            if (File.Exists(announcedPath)
+                && File.ReadAllText(announcedPath).Trim().Equals(currentVersion, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var history = await LauncherUpdateService.GetReleaseHistoryAsync();
+            var release = history.FirstOrDefault(note => note.Version.Equals(currentVersion, StringComparison.OrdinalIgnoreCase));
+            if (release is null) return;
+            File.WriteAllText(announcedPath, currentVersion);
+            new ReleaseNotesWindow([release], true, _isBlueTheme, _isVioletTheme) { Owner = this }.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.WriteError("显示版本更新公告失败", ex.ToString());
+        }
     }
 
     private async Task CheckLauncherUpdatesAsync(bool promptToInstall, bool reportUpToDate)
@@ -1201,6 +1247,14 @@ public partial class MainWindow : Window
         return 0;
     }
 
+    private async void ModsTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || !ReferenceEquals(e.OriginalSource, ModsTabs) || ModsTabs.SelectedIndex != 1
+            || ModrinthResultsListView.Items.Count > 0)
+            return;
+        await LoadRecommendedModsAsync();
+    }
+
     private async void ModsInstanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (IsLoaded && ModsPage.Visibility == Visibility.Visible && ModsInstanceComboBox.SelectedItem is not null)
@@ -1211,6 +1265,7 @@ public partial class MainWindow : Window
             ModrinthInstallButton.IsEnabled = false; ModrinthWikiButton.IsEnabled = false;
             ModrinthDependencyText.Text = "目标版本已切换，请重新搜索以获取对应版本和加载器的模组。";
             ModrinthSearchStatusText.Text = $"当前目标：{SelectedModsInstance?.DisplayName}。";
+            if (ModsTabs.SelectedIndex == 1) await LoadRecommendedModsAsync();
         }
     }
 
@@ -1243,36 +1298,196 @@ public partial class MainWindow : Window
 
     private async void ModrinthSearchButton_Click(object sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(ModrinthSearchTextBox.Text))
+        {
+            await LoadRecommendedModsAsync();
+            return;
+        }
+
         var profile = SelectedModsInstance;
         if (profile is null) { ModrinthSearchStatusText.Text = "请先安装或导入一个版本，再搜索兼容模组。"; return; }
         var query = ModrinthSearchTextBox.Text.Trim();
-        if (query.Length == 0) { ModrinthSearchStatusText.Text = "请输入模组名称或关键词。"; return; }
         try
         {
             ModrinthSearchStatusText.Text = $"正在搜索 Minecraft {profile.GameVersion}（{profile.Loader}）兼容模组…";
-            var facets = new List<string[]> { new[] { "project_type:mod" }, new[] { $"versions:{profile.GameVersion}" } };
-            var loader = GetModrinthLoader(profile);
-            if (!string.IsNullOrWhiteSpace(loader)) facets.Add(new[] { $"categories:{loader}" });
-            var facetJson = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(facets));
+            var facetJson = BuildModrinthFacets(profile);
+            if (ContainsChinese(query))
+            {
+                var mcmodEntries = await SearchMcmodEntriesAsync(query);
+                if (mcmodEntries.Count > 0)
+                {
+                    ModrinthSearchStatusText.Text = $"MC 百科找到 {mcmodEntries.Count} 个中文词条，正在匹配可自动安装的兼容版本…";
+                    _modrinthHits = await BuildChineseModResultsAsync(mcmodEntries, facetJson);
+                    ModrinthResultsListView.ItemsSource = _modrinthHits;
+                    ModrinthResultsListView.SelectedItem = null;
+                    _selectedModrinthVersion = null;
+                    ModrinthDependencyText.Text = "选择条目查看适配版本、前置模组或 MC 百科下载方式。";
+                    ModrinthInstallButton.IsEnabled = false; ModrinthWikiButton.IsEnabled = false;
+                    ModrinthSearchStatusText.Text = _modrinthHits.Count == 0
+                        ? "没有找到结果。请尝试更短的中文名称或英文模组名。"
+                        : $"优先显示 MC 百科中文结果，共 {_modrinthHits.Count} 项；名称按“中文（英文）”显示。";
+                    return;
+                }
+            }
+
             var terms = GetModrinthSearchTerms(query);
             var batches = await Task.WhenAll(terms.Select(term => SearchModrinthProjectsAsync(term, facetJson)));
             _modrinthHits = batches.SelectMany(hits => hits)
                 .GroupBy(hit => hit.ProjectId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())
-                .Take(40)
+                .Take(100)
                 .ToList();
             ModrinthResultsListView.ItemsSource = _modrinthHits;
+            ModrinthResultsListView.SelectedItem = null;
             ModrinthDependencyText.Text = "选择模组查看适配版本与必需前置。";
             ModrinthInstallButton.IsEnabled = false; ModrinthWikiButton.IsEnabled = false; _selectedModrinthVersion = null;
             ModrinthSearchStatusText.Text = _modrinthHits.Count == 0
                 ? "没有找到支持此 Minecraft 版本与加载器的模组。"
-                : $"找到 {_modrinthHits.Count} 个兼容结果；已搜索中文关键词及常见英文名称，并按当前版本和加载器筛选。";
+                : $"找到 {_modrinthHits.Count} 个兼容结果；已搜索输入词及常见英文名称。";
         }
         catch (Exception ex)
         {
-            DiagnosticLogger.WriteError("Modrinth 搜索失败", ex.ToString());
+            DiagnosticLogger.WriteError("模组搜索失败", ex.ToString());
             ModrinthSearchStatusText.Text = $"搜索失败：{ex.Message}。请检查网络后重试。";
         }
+    }
+
+    private async Task LoadRecommendedModsAsync()
+    {
+        var profile = SelectedModsInstance;
+        if (profile is null)
+        {
+            ModrinthSearchStatusText.Text = "请先安装或导入一个版本，再查看兼容推荐。";
+            return;
+        }
+        try
+        {
+            ModrinthSearchStatusText.Text = $"正在按下载量加载 Minecraft {profile.GameVersion}（{profile.Loader}）兼容模组…";
+            var hits = await SearchModrinthProjectsAsync("", BuildModrinthFacets(profile), "downloads");
+            if (!ReferenceEquals(profile, SelectedModsInstance)) return;
+            _modrinthHits = hits;
+            ModrinthResultsListView.ItemsSource = _modrinthHits;
+            ModrinthResultsListView.SelectedItem = null;
+            _selectedModrinthVersion = null;
+            _modrinthPrerequisiteNames = [];
+            ModrinthInstallButton.IsEnabled = false; ModrinthWikiButton.IsEnabled = false;
+            ModrinthDependencyText.Text = "推荐列表按 Modrinth 下载量从高到低排列；选择模组查看适配版本与必需前置。";
+            ModrinthSearchStatusText.Text = $"当前版本兼容的热门模组（按下载量排序，共 {_modrinthHits.Count} 项），可向下滚动浏览。";
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLogger.WriteError("加载热门模组失败", ex.ToString());
+            ModrinthSearchStatusText.Text = $"热门推荐暂时无法读取：{ex.Message}。请检查网络后重试。";
+        }
+    }
+
+    private static string BuildModrinthFacets(InstanceProfile profile)
+    {
+        var facets = new List<string[]> { new[] { "project_type:mod" }, new[] { $"versions:{profile.GameVersion}" } };
+        var loader = GetModrinthLoader(profile);
+        if (!string.IsNullOrWhiteSpace(loader)) facets.Add(new[] { $"categories:{loader}" });
+        return Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(facets));
+    }
+
+    private static bool ContainsChinese(string text) => text.Any(character => character is >= '\u4e00' and <= '\u9fff');
+
+    private async Task<List<ModrinthProjectHit>> BuildChineseModResultsAsync(List<McmodSearchHit> entries, string encodedFacets)
+    {
+        using var semaphore = new SemaphoreSlim(4);
+        var lookupTasks = entries.Take(15).Select(async entry =>
+        {
+            if (string.IsNullOrWhiteSpace(entry.EnglishTitle))
+                return (entry, hits: new List<ModrinthProjectHit>());
+            await semaphore.WaitAsync();
+            try { return (entry, hits: await SearchModrinthProjectsAsync(entry.EnglishTitle, encodedFacets)); }
+            finally { semaphore.Release(); }
+        });
+        var lookups = await Task.WhenAll(lookupTasks);
+        var result = new List<ModrinthProjectHit>();
+        var matchedProjectIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (entry, hits) in lookups)
+        {
+            var matching = hits
+                .Select(hit => (hit, score: GetMcmodMatchScore(entry.EnglishTitle, hit)))
+                .Where(item => item.score > 0)
+                .OrderByDescending(item => item.score)
+                .ThenByDescending(item => ParseDownloadCount(item.hit.Downloads))
+                .Take(3)
+                .ToList();
+            foreach (var item in matching)
+            {
+                if (!matchedProjectIds.Add(item.hit.ProjectId)) continue;
+                item.hit.Title = FormatLocalizedModName(entry.ChineseTitle, entry.EnglishTitle);
+                item.hit.WikiUrl = entry.WikiUrl;
+                item.hit.DownloadUrl = entry.DownloadUrl;
+                result.Add(item.hit);
+            }
+            if (matching.Count == 0)
+            {
+                result.Add(new ModrinthProjectHit
+                {
+                    Title = FormatLocalizedModName(entry.ChineseTitle, entry.EnglishTitle),
+                    EnglishTitle = entry.EnglishTitle,
+                    Description = "MC 百科词条。点击“查看下载方式”可确认授权状态及作者提供的下载来源。",
+                    Author = "MC 百科",
+                    Downloads = "—",
+                    WikiUrl = entry.WikiUrl,
+                    DownloadUrl = entry.DownloadUrl
+                });
+            }
+        }
+        return result.Take(100).ToList();
+    }
+
+    private static int GetMcmodMatchScore(string englishTitle, ModrinthProjectHit hit)
+    {
+        var expected = NormalizeModName(englishTitle);
+        var title = NormalizeModName(hit.Title);
+        var slug = NormalizeModName(hit.Slug);
+        if (expected.Length < 3) return 0;
+        if (title == expected || slug == expected) return 100;
+        if (title.Contains(expected, StringComparison.Ordinal) || expected.Contains(title, StringComparison.Ordinal)) return 80;
+        if (slug.Contains(expected, StringComparison.Ordinal) || expected.Contains(slug, StringComparison.Ordinal)) return 70;
+        return 0;
+    }
+
+    private static long ParseDownloadCount(string value)
+    {
+        var digits = Regex.Replace(value ?? "", "[^0-9]", "");
+        return long.TryParse(digits, out var count) ? count : 0;
+    }
+
+    private static string NormalizeModName(string value) => Regex.Replace(value ?? "", "[^A-Za-z0-9]", "").ToLowerInvariant();
+
+    private static string FormatLocalizedModName(string chineseTitle, string englishTitle) =>
+        string.IsNullOrWhiteSpace(englishTitle) ? chineseTitle : $"{chineseTitle}（{englishTitle}）";
+
+    private async Task<List<McmodSearchHit>> SearchMcmodEntriesAsync(string query)
+    {
+        using var response = await McmodClient.GetAsync($"https://search.mcmod.cn/s?key={Uri.EscapeDataString(query)}&filter=1&mold=1");
+        if (!response.IsSuccessStatusCode) return [];
+        var html = await response.Content.ReadAsStringAsync();
+        var anchors = Regex.Matches(html,
+            "<a[^>]+href=[\\\"'](?<url>[^\\\"']*/class/(?<id>\\d+)\\.html[^\\\"']*)[\\\"'][^>]*>(?<title>.*?)</a>",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        var entries = new List<McmodSearchHit>();
+        foreach (Match anchor in anchors)
+        {
+            if (!anchor.Success) continue;
+            var title = System.Net.WebUtility.HtmlDecode(Regex.Replace(anchor.Groups["title"].Value, "<.*?>", "")).Trim();
+            if (string.IsNullOrWhiteSpace(title)) continue;
+            var localized = Regex.Match(title, "^(?<chinese>.*?)\\s*[（(](?<english>[^()（）]+)[）)]\\s*$");
+            var chineseTitle = localized.Success ? localized.Groups["chinese"].Value.Trim() : title;
+            var englishTitle = localized.Success ? localized.Groups["english"].Value.Trim() : "";
+            var id = anchor.Groups["id"].Value;
+            var wikiUrl = Uri.TryCreate(anchor.Groups["url"].Value, UriKind.Absolute, out var absolute)
+                ? absolute.ToString() : new Uri(new Uri("https://www.mcmod.cn"), anchor.Groups["url"].Value).ToString();
+            var entry = new McmodSearchHit(chineseTitle, englishTitle, wikiUrl, $"https://www.mcmod.cn/download/{id}.html");
+            if (!entries.Any(existing => existing.WikiUrl.Equals(entry.WikiUrl, StringComparison.OrdinalIgnoreCase)))
+                entries.Add(entry);
+            if (entries.Count >= 30) break;
+        }
+        return entries;
     }
 
     private void ModrinthSearchTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1297,9 +1512,10 @@ public partial class MainWindow : Window
             .ToList();
     }
 
-    private static async Task<List<ModrinthProjectHit>> SearchModrinthProjectsAsync(string term, string encodedFacets)
+    private static async Task<List<ModrinthProjectHit>> SearchModrinthProjectsAsync(string term, string encodedFacets, string index = "relevance")
     {
-        var url = $"https://api.modrinth.com/v2/search?query={Uri.EscapeDataString(term)}&facets={encodedFacets}&index=relevance&limit=40";
+        var query = string.IsNullOrWhiteSpace(term) ? "" : $"query={Uri.EscapeDataString(term)}&";
+        var url = $"https://api.modrinth.com/v2/search?{query}facets={encodedFacets}&index={Uri.EscapeDataString(index)}&limit=100";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd("CIE-Launcher/0.1.0 (desktop launcher)");
         using var response = await ModrinthClient.SendAsync(request);
@@ -1310,6 +1526,7 @@ public partial class MainWindow : Window
             ProjectId = hit.GetProperty("project_id").GetString() ?? "",
             Slug = hit.TryGetProperty("slug", out var slug) ? slug.GetString() ?? "" : "",
             Title = hit.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "",
+            EnglishTitle = hit.TryGetProperty("title", out title) ? title.GetString() ?? "" : "",
             Description = hit.TryGetProperty("description", out var description) ? description.GetString() ?? "" : "",
             Author = hit.TryGetProperty("author", out var author) ? author.GetString() ?? "" : "",
             Downloads = hit.TryGetProperty("downloads", out var downloads) ? downloads.GetInt64().ToString("N0") : "—",
@@ -1324,16 +1541,34 @@ public partial class MainWindow : Window
         if (ModrinthResultsListView.SelectedItem is not ModrinthProjectHit hit || SelectedModsInstance is not { } profile) return;
         _selectedModrinthVersion = null;
         _modrinthPrerequisiteNames = [];
-        ModrinthInstallButton.IsEnabled = false; ModrinthWikiButton.IsEnabled = false;
+        ModrinthInstallButton.IsEnabled = false;
+        ModrinthWikiButton.Content = "查看下载方式";
+        ModrinthWikiButton.IsEnabled = !string.IsNullOrWhiteSpace(hit.DownloadUrl ?? hit.WikiUrl);
+        if (string.IsNullOrWhiteSpace(hit.ProjectId))
+        {
+            ModrinthDependencyText.Text = "此条目目前没有可从 Modrinth 自动安装的兼容文件。请打开 MC 百科下载方式页确认授权状态和作者来源，再将 .jar 拖入已安装模组页。";
+            return;
+        }
+
         ModrinthDependencyText.Text = "正在检查适配版本与前置模组…";
         try
         {
             var versionsTask = GetModrinthVersionsAsync(hit.ProjectId, profile);
-            var wikiTask = FindMcmodEntryAsync(hit);
-            await Task.WhenAll(versionsTask, wikiTask);
+            var mcmodTask = string.IsNullOrWhiteSpace(hit.WikiUrl)
+                ? FindMcmodEntryAsync(hit)
+                : Task.FromResult<McmodSearchHit?>(null);
+            await Task.WhenAll(versionsTask, mcmodTask);
             if (!ReferenceEquals(ModrinthResultsListView.SelectedItem, hit)) return;
-            hit.WikiUrl = wikiTask.Result;
-            ModrinthWikiButton.IsEnabled = !string.IsNullOrWhiteSpace(hit.WikiUrl);
+            var mcmod = mcmodTask.Result;
+            if (mcmod is not null)
+            {
+                hit.WikiUrl = mcmod.WikiUrl;
+                hit.DownloadUrl = mcmod.DownloadUrl;
+                if (!string.IsNullOrWhiteSpace(mcmod.ChineseTitle))
+                    hit.Title = FormatLocalizedModName(mcmod.ChineseTitle,
+                        string.IsNullOrWhiteSpace(mcmod.EnglishTitle) ? hit.EnglishTitle : mcmod.EnglishTitle);
+                ModrinthWikiButton.IsEnabled = true;
+            }
             var versions = versionsTask.Result;
             _selectedModrinthVersion = versions.FirstOrDefault();
             if (_selectedModrinthVersion is null)
@@ -1494,33 +1729,35 @@ public partial class MainWindow : Window
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
     }
 
-    private static async Task<string?> FindMcmodEntryAsync(ModrinthProjectHit hit)
+    private async Task<McmodSearchHit?> FindMcmodEntryAsync(ModrinthProjectHit hit)
     {
-        var queries = new[] { hit.Title, hit.Slug }.Where(q => !string.IsNullOrWhiteSpace(q)).Distinct(StringComparer.OrdinalIgnoreCase);
+        var queries = new[] { hit.EnglishTitle, hit.Slug, hit.Title }
+            .Where(query => !string.IsNullOrWhiteSpace(query))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
         foreach (var query in queries)
         {
             try
             {
-                using var response = await McmodClient.GetAsync($"https://search.mcmod.cn/s?key={Uri.EscapeDataString(query)}&filter=1&mold=1");
-                if (!response.IsSuccessStatusCode) continue;
-                var html = await response.Content.ReadAsStringAsync();
-                var anchors = Regex.Matches(html,
-                    "<a[^>]+href=[\\\"'](?<url>[^\\\"']*/class/\\d+\\.html[^\\\"']*)[\\\"'][^>]*>(?<title>.*?)</a>",
-                    RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                foreach (Match anchor in anchors)
-                {
-                    if (!anchor.Success) continue;
-                    var title = System.Net.WebUtility.HtmlDecode(Regex.Replace(anchor.Groups["title"].Value, "<.*?>", "")).Trim();
-                    var normTitle = Regex.Replace(title, "[^\\p{L}\\p{N}]", "").ToLowerInvariant();
-                    var normQuery = Regex.Replace(query, "[^\\p{L}\\p{N}]", "").ToLowerInvariant();
-                    if (normTitle.Length > 0 && normQuery.Length > 2 && (normTitle.Contains(normQuery) || normQuery.Contains(normTitle)))
-                        return Uri.TryCreate(anchor.Groups["url"].Value, UriKind.Absolute, out var absolute)
-                            ? absolute.ToString() : new Uri(new Uri("https://www.mcmod.cn"), anchor.Groups["url"].Value).ToString();
-                }
+                var entries = await SearchMcmodEntriesAsync(query);
+                var matched = entries
+                    .Select(entry => (entry, score: Math.Max(
+                        GetMcmodMatchScore(hit.EnglishTitle, new ModrinthProjectHit { Title = entry.EnglishTitle }),
+                        GetMcmodMatchScore(hit.Slug, new ModrinthProjectHit { Title = entry.EnglishTitle }))))
+                    .OrderByDescending(item => item.score)
+                    .FirstOrDefault();
+                if (matched.entry is not null) return matched.entry;
             }
             catch { }
         }
         return null;
+    }
+
+    private void ModrinthWikiButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ModrinthResultsListView.SelectedItem is not ModrinthProjectHit hit) return;
+        var url = hit.DownloadUrl ?? hit.WikiUrl;
+        if (string.IsNullOrWhiteSpace(url)) return;
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private void ModsPage_DragOver(object sender, DragEventArgs e)
@@ -2283,13 +2520,17 @@ internal sealed class ModrinthProjectHit
     public string ProjectId { get; set; } = "";
     public string Slug { get; set; } = "";
     public string Title { get; set; } = "";
+    public string EnglishTitle { get; set; } = "";
     public string Description { get; set; } = "";
     public string Author { get; set; } = "";
     public string Downloads { get; set; } = "";
     [JsonPropertyName("icon_url")]
     public string? IconUrl { get; set; }
     public string? WikiUrl { get; set; }
+    public string? DownloadUrl { get; set; }
 }
+
+internal sealed record McmodSearchHit(string ChineseTitle, string EnglishTitle, string WikiUrl, string DownloadUrl);
 
 internal sealed class ModrinthVersionInfo
 {
